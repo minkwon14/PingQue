@@ -4,6 +4,7 @@ import type {
   PublicRoom,
   RequestStatus,
   Room,
+  RoomButton,
   RoomSnapshot,
 } from "@/lib/domain/types";
 
@@ -31,7 +32,7 @@ export interface CreateRequestResult {
  * (expired room, full room, rate limit, bad transition, ...).
  */
 export interface RoomStore {
-  createRoom(input: { templateId: string }): Promise<CreateRoomResult>;
+  createRoom(input: { templateId: string; buttons?: unknown }): Promise<CreateRoomResult>;
   getPublicRoom(code: string): Promise<PublicRoom>;
   /** Passing an existing device token re-attaches to the same participant. */
   joinRoom(
@@ -42,8 +43,11 @@ export interface RoomStore {
   createRequest(
     code: string,
     token: string,
-    input: { id: unknown; selections: unknown },
+    /** `text` (a quick button) takes precedence over `selections` (template steps). */
+    input: { id: unknown; selections?: unknown; text?: unknown },
   ): Promise<CreateRequestResult>;
+  /** Host only. Replaces the room's shared quick buttons. */
+  setButtons(code: string, token: string, buttons: unknown): Promise<RoomButton[]>;
   updateRequestStatus(
     code: string,
     token: string,

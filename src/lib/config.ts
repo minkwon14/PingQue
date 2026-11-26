@@ -24,3 +24,8 @@ export const NAME_MAX_LENGTH = 20;
 
 /** A participant counts as connected if its device fetched room state within this window (poll is 5s). */
 export const PRESENCE_TTL_MS = 15_000;
+
+/** Shared (host-edited) quick buttons per room, and personal buttons per device. */
+export const MAX_CUSTOM_BUTTONS = 8;
+
+export const CUSTOM_BUTTON_LABEL_MAX_LENGTH = 20;

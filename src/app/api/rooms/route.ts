@@ -8,7 +8,10 @@ export async function POST(request: Request) {
     if (typeof body.templateId !== "string") {
       throw new DomainError("invalid_input", "템플릿을 선택해 주세요.");
     }
-    const { room, hostToken } = await getStore().createRoom({ templateId: body.templateId });
+    const { room, hostToken } = await getStore().createRoom({
+      templateId: body.templateId,
+      buttons: body.buttons,
+    });
     return Response.json({ room, hostToken }, { status: 201 });
   } catch (error) {
     return errorResponse(error);
