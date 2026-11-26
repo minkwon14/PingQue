@@ -10,6 +10,9 @@ import { loadHostButtons } from "@/lib/client/buttons";
 import { hostKey, writeStored } from "@/lib/client/storage";
 import { ROOM_TTL_MINUTES } from "@/lib/config";
 
+const ROOM_TTL_LABEL =
+  ROOM_TTL_MINUTES % 60 === 0 ? `${ROOM_TTL_MINUTES / 60}시간` : `${ROOM_TTL_MINUTES}분`;
+
 export default function Home() {
   const router = useRouter();
   const [templateId, setTemplateId] = useState(TEMPLATES[0].id);
@@ -35,7 +38,7 @@ export default function Home() {
   return (
     <main className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-10 p-6 pt-12">
       <header>
-        <h1 className="text-4xl font-black tracking-tight">PingQue</h1>
+        <h1 className="text-4xl font-black tracking-tight">TapCue</h1>
         <p className="mt-2 text-lg text-zinc-400">터치 한 번으로 보내는 현장 실시간 신호</p>
       </header>
 
@@ -63,7 +66,7 @@ export default function Home() {
           {creating ? "만드는 중…" : "방 만들기"}
         </button>
         <p className="text-sm text-zinc-500">
-          방은 {ROOM_TTL_MINUTES}분 뒤에 자동으로 종료돼요. 가입은 필요 없어요.
+          방은 {ROOM_TTL_LABEL} 뒤에 자동으로 종료돼요. 가입은 필요 없어요.
         </p>
         {error ? <p className="text-red-400">{error}</p> : null}
       </section>

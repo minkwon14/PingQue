@@ -1,4 +1,4 @@
--- PingQue initial schema.
+-- TapCue initial schema.
 --
 -- Access model (first slice): the Next.js server talks to Postgres with the
 -- service-role key and authenticates devices itself with opaque tokens whose

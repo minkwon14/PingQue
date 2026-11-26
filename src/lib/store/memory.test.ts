@@ -25,7 +25,7 @@ let store: MemoryRoomStore;
 
 beforeEach(() => {
   clock = 1_000_000;
-  store = new MemoryRoomStore({ now: () => clock, roomTtlMs: 30 * 60 * 1000 });
+  store = new MemoryRoomStore({ now: () => clock, roomTtlMs: 60 * 60 * 1000 });
 });
 
 async function setup() {
@@ -37,7 +37,7 @@ async function setup() {
 describe("rooms and joining", () => {
   it("creates a room that expires after the configured lifetime", async () => {
     const { room } = await store.createRoom({ templateId: "worship" });
-    expect(room.expiresAt - room.createdAt).toBe(30 * 60 * 1000);
+    expect(room.expiresAt - room.createdAt).toBe(60 * 60 * 1000);
     expect(room.code).toHaveLength(8);
     await expect(store.getPublicRoom(room.code.toLowerCase())).resolves.toMatchObject({
       participantCount: 0,
