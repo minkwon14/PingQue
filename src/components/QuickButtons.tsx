@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { ButtonListEditor } from "@/components/ButtonListEditor";
 import { parseButtons, PERSONAL_BUTTONS_KEY, savePersonalButtons } from "@/lib/client/buttons";
 import { useStoredValue } from "@/lib/client/storage";
@@ -18,7 +18,6 @@ export function QuickButtons({
 }) {
   const raw = useStoredValue(PERSONAL_BUTTONS_KEY);
   const personal = useMemo(() => parseButtons(raw), [raw]);
-  const [editing, setEditing] = useState(false);
 
   const tile = (button: RoomButton, own: boolean) => (
     <button
@@ -36,30 +35,30 @@ export function QuickButtons({
 
   return (
     <section className="flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-lg font-bold text-zinc-300">빠른 요청</h2>
-        <button
-          type="button"
-          onClick={() => setEditing(!editing)}
-          className="min-h-10 rounded-full bg-zinc-800 px-4 text-sm font-semibold"
-        >
-          {editing ? "닫기" : "내 버튼 편집"}
-        </button>
-      </div>
+      <h2 className="text-lg font-bold text-zinc-300">빠른 요청</h2>
       {shared.length + personal.length > 0 ? (
         <div className="grid grid-cols-2 gap-3">
           {shared.map((b) => tile(b, false))}
           {personal.map((b) => tile(b, true))}
         </div>
       ) : (
-        <p className="text-sm text-zinc-500">나만 쓰는 버튼을 만들어 두면 한 번에 보낼 수 있어요.</p>
+        <p className="text-sm text-zinc-500">설정에서 나만 쓰는 버튼을 만들어 두면 한 번에 보낼 수 있어요.</p>
       )}
-      {editing ? (
-        <div className="rounded-2xl bg-zinc-900 p-3">
-          <p className="mb-3 text-sm text-zinc-500">내 버튼은 이 기기에만 저장되고 다른 사람에게는 보이지 않아요.</p>
-          <ButtonListEditor buttons={personal} onChange={savePersonalButtons} />
-        </div>
-      ) : null}
+    </section>
+  );
+}
+
+/** Editor for this device's own quick buttons. */
+export function PersonalButtonsEditor() {
+  const raw = useStoredValue(PERSONAL_BUTTONS_KEY);
+  const personal = useMemo(() => parseButtons(raw), [raw]);
+  return (
+    <section className="flex flex-col gap-3">
+      <h2 className="text-lg font-bold text-zinc-300">내 빠른 요청 버튼</h2>
+      <div className="rounded-2xl bg-zinc-900 p-3">
+        <p className="mb-3 text-sm text-zinc-500">내 버튼은 이 기기에만 저장되고 다른 사람에게는 보이지 않아요.</p>
+        <ButtonListEditor buttons={personal} onChange={savePersonalButtons} />
+      </div>
     </section>
   );
 }

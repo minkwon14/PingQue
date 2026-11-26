@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnnouncementBanner, AnnouncementHistory } from "@/components/Announcements";
-import { ParticipantProfile } from "@/components/ParticipantProfile";
-import { QuickButtons } from "@/components/QuickButtons";
+import { LeaveRoomButton, ParticipantProfile } from "@/components/ParticipantProfile";
+import { PersonalButtonsEditor, QuickButtons } from "@/components/QuickButtons";
+import { SettingsButton, SettingsSheet } from "@/components/SettingsSheet";
 import { ConnectionBanner, ConnectionIndicator, Notice, StatusBadge } from "@/components/ui";
 import { actionErrorMessage, ApiError, api } from "@/lib/client/api";
 import { formatCountdown, timeAgo } from "@/lib/client/format";
@@ -34,6 +35,7 @@ export function ParticipantRoom({ code }: { code: string }) {
   const [picked, setPicked] = useState<string[]>([]);
   const [sending, setSending] = useState(false);
   const [lockedUntil, setLockedUntil] = useState(0);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [undo, setUndo] = useState<{ id: string; label: string; until: number } | null>(null);
   const pendingId = useRef<{ key: string; id: string } | null>(null);
@@ -183,11 +185,14 @@ export function ParticipantRoom({ code }: { code: string }) {
             <div className="text-xs text-zinc-500">접속 중 {snapshot.connectedCount}명</div>
           ) : null}
         </div>
-        <div className="text-right">
-          <div className={`font-mono text-xl font-bold ${remaining < 120_000 ? "text-amber-300" : ""}`}>
-            {formatCountdown(remaining)}
+        <div className="flex items-center gap-3">
+          <div className="text-right">
+            <div className={`font-mono text-xl font-bold ${remaining < 120_000 ? "text-amber-300" : ""}`}>
+              {formatCountdown(remaining)}
+            </div>
+            <div className="text-xs text-zinc-500">남은 시간</div>
           </div>
-          <div className="text-xs text-zinc-500">남은 시간</div>
+          <SettingsButton onClick={() => setSettingsOpen(true)} />
         </div>
       </header>
 
@@ -299,16 +304,24 @@ export function ParticipantRoom({ code }: { code: string }) {
             </ul>
           )}
         </section>
-
-        <ParticipantProfile
-          code={code}
-          token={token}
-          name={me.name}
-          role={me.role}
-          roles={snapshot.room.roles}
-          onChanged={() => void refresh()}
-        />
       </main>
+
+      <footer className="flex justify-center px-4 py-3">
+        <LeaveRoomButton code={code} token={token} />
+      </footer>
+      {settingsOpen ? (
+        <SettingsSheet onClose={() => setSettingsOpen(false)}>
+          <ParticipantProfile
+            code={code}
+            token={token}
+            name={me.name}
+            role={me.role}
+            roles={snapshot.room.roles}
+            onChanged={() => void refresh()}
+          />
+          <PersonalButtonsEditor />
+        </SettingsSheet>
+      ) : null}
     </div>
   );
 }
