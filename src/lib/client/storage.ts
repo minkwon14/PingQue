@@ -13,7 +13,7 @@ function subscribe(listener: () => void) {
   };
 }
 
-function read(key: string): string | null {
+export function readStored(key: string): string | null {
   try {
     return window.localStorage.getItem(key);
   } catch {
@@ -35,7 +35,7 @@ export function writeStored(key: string, value: string | null) {
 export function useStoredValue(key: string): string | null | undefined {
   return useSyncExternalStore(
     subscribe,
-    () => read(key),
+    () => readStored(key),
     () => undefined,
   );
 }

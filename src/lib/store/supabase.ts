@@ -15,6 +15,8 @@ import {
   normalizeJoinCode,
   rateLimitRetryAfter,
   resolveSelections,
+  resolveText,
+  validateButtons,
   validateParticipantInput,
 } from "@/lib/domain/rules";
 import { getTemplate } from "@/lib/domain/templates";
@@ -24,6 +26,7 @@ import type {
   PublicRoom,
   RequestStatus,
   Room,
+  RoomButton,
   RoomSnapshot,
 } from "@/lib/domain/types";
 import { hashToken, newToken, randomInt } from "./crypto";
@@ -39,6 +42,7 @@ interface RoomRow {
   code: string;
   template_id: string;
   max_participants: number;
+  buttons: RoomButton[];
   created_at: string;
   expires_at: string;
 }
@@ -108,6 +112,7 @@ const toRoom = (r: RoomRow): Room => ({
   code: r.code,
   templateId: r.template_id,
   maxParticipants: r.max_participants,
+  buttons: r.buttons ?? [],
   createdAt: ms(r.created_at),
   expiresAt: ms(r.expires_at),
 });
@@ -156,9 +161,10 @@ export class SupabaseRoomStore implements RoomStore {
     );
   }
 
-  async createRoom(input: { templateId: string }): Promise<CreateRoomResult> {
+  async createRoom(input: { templateId: string; buttons?: unknown }): Promise<CreateRoomResult> {
     const template = getTemplate(input.templateId);
     if (!template) throw new DomainError("invalid_input", "알 수 없는 템플릿이에요.");
+    const buttons = input.buttons === undefined ? [] : validateButtons(input.buttons);
 
     const now = Date.now();
     let room: RoomRow | null = null;
@@ -169,6 +175,7 @@ export class SupabaseRoomStore implements RoomStore {
           code: generateJoinCode(randomInt),
           template_id: template.id,
           max_participants: MAX_PARTICIPANTS,
+          buttons,
           created_at: new Date(now).toISOString(),
           expires_at: new Date(now + ROOM_TTL_MS).toISOString(),
         })
@@ -291,7 +298,7 @@ export class SupabaseRoomStore implements RoomStore {
   async createRequest(
     code: string,
     token: string,
-    input: { id: unknown; selections: unknown },
+    input: { id: unknown; selections?: unknown; text?: unknown },
   ): Promise<CreateRequestResult> {
     const room = await this.requireActiveRoom(code);
     const actor = await this.authenticate(room, token);
@@ -318,7 +325,10 @@ export class SupabaseRoomStore implements RoomStore {
 
     const template = getTemplate(room.template_id);
     if (!template) throw new Error(`unknown template ${room.template_id}`);
-    const resolved = resolveSelections(template, input.selections);
+    const resolved =
+      input.text !== undefined
+        ? resolveText(input.text)
+        : resolveSelections(template, input.selections);
 
     const last = unwrap(
       (await this.db
@@ -368,6 +378,18 @@ export class SupabaseRoomStore implements RoomStore {
     );
     if (!created) throw new Error("supabase: request insert returned no row");
     return { request: toRequest(created), created: true };
+  }
+
+  async setButtons(code: string, token: string, buttons: unknown): Promise<RoomButton[]> {
+    const room = await this.requireActiveRoom(code);
+    const actor = await this.authenticate(room, token);
+    if (actor.kind !== "receiver") {
+      throw new DomainError("forbidden", "호스트만 버튼을 바꿀 수 있어요.");
+    }
+    const valid = validateButtons(buttons);
+    const updated = await this.db.from("rooms").update({ buttons: valid }).eq("id", room.id);
+    if (updated.error) fail(updated.error);
+    return valid;
   }
 
   async updateRequestStatus(
@@ -458,6 +480,11 @@ export class SupabaseRoomStore implements RoomStore {
           emit,
         );
       }
+      channel.on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "rooms", filter: `id=eq.${roomId}` },
+        emit,
+      );
       channel.subscribe();
       shared = { channel, listeners };
       this.channels.set(roomId, shared);

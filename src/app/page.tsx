@@ -6,6 +6,7 @@ import { primaryButton, secondaryButton } from "@/components/ui";
 import { TEMPLATES } from "@/lib/domain/templates";
 import { normalizeJoinCode } from "@/lib/domain/rules";
 import { api } from "@/lib/client/api";
+import { loadHostButtons } from "@/lib/client/buttons";
 import { hostKey, writeStored } from "@/lib/client/storage";
 import { ROOM_TTL_MINUTES } from "@/lib/config";
 
@@ -20,7 +21,7 @@ export default function Home() {
     setCreating(true);
     setError(null);
     try {
-      const { room, hostToken } = await api.createRoom(templateId);
+      const { room, hostToken } = await api.createRoom(templateId, loadHostButtons());
       writeStored(hostKey(room.code), hostToken);
       router.push(`/host/${room.code}`);
     } catch (e) {

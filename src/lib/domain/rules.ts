@@ -1,7 +1,12 @@
-import { JOIN_CODE_LENGTH, NAME_MAX_LENGTH } from "@/lib/config";
+import {
+  CUSTOM_BUTTON_LABEL_MAX_LENGTH,
+  JOIN_CODE_LENGTH,
+  MAX_CUSTOM_BUTTONS,
+  NAME_MAX_LENGTH,
+} from "@/lib/config";
 import { DomainError } from "./errors";
 import type { Template } from "./templates";
-import type { ActorKind, RequestStatus, Room } from "./types";
+import type { ActorKind, RequestStatus, Room, RoomButton } from "./types";
 
 /** No 0/O/1/I/L so codes survive being read aloud or typed on a phone. */
 export const JOIN_CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
@@ -82,6 +87,33 @@ export function resolveSelections(
     action: labels[labels.length - 1],
     label: labels.join(" · "),
   };
+}
+
+/** Free-text request (quick button): no template steps, the text is the whole label. */
+export function resolveText(text: unknown): ResolvedSelections {
+  const label = typeof text === "string" ? text.trim() : "";
+  if (label.length < 1 || label.length > CUSTOM_BUTTON_LABEL_MAX_LENGTH) {
+    throw new DomainError(
+      "invalid_input",
+      `요청 내용은 1~${CUSTOM_BUTTON_LABEL_MAX_LENGTH}자로 입력해 주세요.`,
+    );
+  }
+  return { selections: [], item: label, qualifiers: [], action: "", label };
+}
+
+export function validateButtons(input: unknown): RoomButton[] {
+  if (!Array.isArray(input) || input.length > MAX_CUSTOM_BUTTONS) {
+    throw new DomainError("invalid_input", `버튼은 최대 ${MAX_CUSTOM_BUTTONS}개까지 만들 수 있어요.`);
+  }
+  const seen = new Set<string>();
+  return input.map((item: unknown) => {
+    const { id, label } = (item ?? {}) as { id?: unknown; label?: unknown };
+    if (!isUuid(id) || seen.has(id)) {
+      throw new DomainError("invalid_input", "버튼 정보가 올바르지 않아요.");
+    }
+    seen.add(id);
+    return { id, label: resolveText(label).label };
+  });
 }
 
 const TRANSITIONS: Record<ActorKind, Partial<Record<RequestStatus, RequestStatus[]>>> = {

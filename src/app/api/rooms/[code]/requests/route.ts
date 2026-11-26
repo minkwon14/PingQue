@@ -8,6 +8,7 @@ export async function POST(request: Request, { params }: CodeContext) {
     const result = await getStore().createRequest(code, bearerToken(request), {
       id: body.id,
       selections: body.selections,
+      text: body.text,
     });
     return Response.json(result.request, { status: result.created ? 201 : 200 });
   } catch (error) {

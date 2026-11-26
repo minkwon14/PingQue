@@ -2,11 +2,18 @@ export type RequestStatus = "received" | "confirmed" | "done" | "cancelled";
 
 export type ActorKind = "receiver" | "participant";
 
+/** One-tap request button shared with everyone in the room (set by the host). */
+export interface RoomButton {
+  id: string;
+  label: string;
+}
+
 export interface Room {
   id: string;
   code: string;
   templateId: string;
   maxParticipants: number;
+  buttons: RoomButton[];
   createdAt: number;
   expiresAt: number;
 }

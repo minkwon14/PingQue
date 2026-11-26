@@ -9,6 +9,8 @@ import {
   normalizeJoinCode,
   rateLimitRetryAfter,
   resolveSelections,
+  resolveText,
+  validateButtons,
   validateParticipantInput,
 } from "@/lib/domain/rules";
 import { getTemplate, type Template } from "@/lib/domain/templates";
@@ -19,6 +21,7 @@ import type {
   Receiver,
   RequestStatus,
   Room,
+  RoomButton,
   RoomSnapshot,
 } from "@/lib/domain/types";
 import { hashToken, newToken, randomInt, randomUUID } from "./crypto";
@@ -75,9 +78,10 @@ export class MemoryRoomStore implements RoomStore {
     this.rateLimitMs = options.rateLimitMs ?? REQUEST_RATE_LIMIT_MS;
   }
 
-  async createRoom(input: { templateId: string }): Promise<CreateRoomResult> {
+  async createRoom(input: { templateId: string; buttons?: unknown }): Promise<CreateRoomResult> {
     const template = getTemplate(input.templateId);
     if (!template) throw new DomainError("invalid_input", "알 수 없는 템플릿이에요.");
+    const buttons = input.buttons === undefined ? [] : validateButtons(input.buttons);
     this.purgeOldRooms();
 
     let code = generateJoinCode(randomInt);
@@ -89,6 +93,7 @@ export class MemoryRoomStore implements RoomStore {
       code,
       templateId: template.id,
       maxParticipants: this.maxParticipants,
+      buttons,
       createdAt: now,
       expiresAt: now + this.roomTtlMs,
     };
@@ -187,7 +192,7 @@ export class MemoryRoomStore implements RoomStore {
   async createRequest(
     code: string,
     token: string,
-    input: { id: unknown; selections: unknown },
+    input: { id: unknown; selections?: unknown; text?: unknown },
   ): Promise<CreateRequestResult> {
     const state = this.requireActiveRoom(code);
     const actor = this.authenticate(state, token);
@@ -208,7 +213,10 @@ export class MemoryRoomStore implements RoomStore {
       throw new DomainError("id_conflict", "이미 사용된 요청 ID예요.");
     }
 
-    const resolved = resolveSelections(state.template, input.selections);
+    const resolved =
+      input.text !== undefined
+        ? resolveText(input.text)
+        : resolveSelections(state.template, input.selections);
 
     const now = this.now();
     const last = state.requests
@@ -240,6 +248,16 @@ export class MemoryRoomStore implements RoomStore {
     this.requestIndex.set(request.id, state);
     this.notify(state.room.code);
     return { request: copy(request), created: true };
+  }
+
+  async setButtons(code: string, token: string, buttons: unknown): Promise<RoomButton[]> {
+    const state = this.requireActiveRoom(code);
+    if (this.authenticate(state, token).kind !== "receiver") {
+      throw new DomainError("forbidden", "호스트만 버튼을 바꿀 수 있어요.");
+    }
+    state.room = { ...state.room, buttons: validateButtons(buttons) };
+    this.notify(state.room.code);
+    return state.room.buttons.map((b) => ({ ...b }));
   }
 
   async updateRequestStatus(

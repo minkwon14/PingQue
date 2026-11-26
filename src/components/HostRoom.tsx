@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { HostButtonsPanel } from "@/components/HostButtonsPanel";
 import {
   ConnectionBanner,
   ConnectionIndicator,
@@ -254,6 +255,8 @@ export function HostRoom({ code, publicOrigin }: { code: string; publicOrigin?: 
         ) : null}
 
         {actionError ? <p className="text-red-400">{actionError}</p> : null}
+
+        <HostButtonsPanel code={code} token={token as string} saved={snapshot.room.buttons} />
 
         {primary ? (
           <section className="flex flex-col gap-2">

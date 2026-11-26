@@ -3,6 +3,7 @@ import type {
   PublicRoom,
   RequestStatus,
   Room,
+  RoomButton,
   RoomSnapshot,
   Participant,
 } from "@/lib/domain/types";
@@ -67,10 +68,10 @@ async function call<T>(
 const room = (code: string) => `/api/rooms/${encodeURIComponent(code)}`;
 
 export const api = {
-  createRoom: (templateId: string) =>
+  createRoom: (templateId: string, buttons?: RoomButton[]) =>
     call<{ room: Room; hostToken: string }>("/api/rooms", {
       method: "POST",
-      body: { templateId },
+      body: { templateId, buttons },
     }),
   getPublicRoom: (code: string) => call<PublicRoom>(room(code)),
   join: (code: string, input: { name: string; role: string }, token?: string | null) =>
@@ -81,8 +82,14 @@ export const api = {
     }),
   getState: (code: string, token: string) =>
     call<RoomSnapshot>(`${room(code)}/state`, { token }),
-  sendRequest: (code: string, token: string, input: { id: string; selections: string[] }) =>
+  sendRequest: (code: string, token: string, input: { id: string; selections?: string[]; text?: string }) =>
     call<PingRequest>(`${room(code)}/requests`, { method: "POST", token, body: input }),
+  setButtons: (code: string, token: string, buttons: RoomButton[]) =>
+    call<{ buttons: RoomButton[] }>(`${room(code)}/buttons`, {
+      method: "PUT",
+      token,
+      body: { buttons },
+    }),
   setStatus: (code: string, token: string, id: string, status: RequestStatus) =>
     call<PingRequest>(`${room(code)}/requests/${id}`, {
       method: "PATCH",
