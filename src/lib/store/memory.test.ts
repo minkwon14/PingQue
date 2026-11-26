@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DomainError, type DomainErrorCode } from "@/lib/domain/errors";
-import { CUSTOM_BUTTON_LABEL_MAX_LENGTH, MAX_CUSTOM_BUTTONS } from "@/lib/config";
+import {
+  ANNOUNCEMENT_HISTORY_SIZE,
+  ANNOUNCEMENT_MAX_LENGTH,
+  ANNOUNCEMENT_RATE_LIMIT_MS,
+  CUSTOM_BUTTON_LABEL_MAX_LENGTH,
+  MAX_CUSTOM_BUTTONS,
+} from "@/lib/config";
 import { MemoryRoomStore } from "./memory";
 
 const SELECTION = ["keyboard", "my-monitor", "louder"];
@@ -337,5 +343,47 @@ describe("custom buttons", () => {
       store.createRequest(room.code, token, { id: ID_B, text: "가".repeat(CUSTOM_BUTTON_LABEL_MAX_LENGTH + 1) }),
       "invalid_input",
     );
+  });
+});
+
+describe("announcements", () => {
+  it("is host-only, trimmed and validated", async () => {
+    const { room, hostToken, token } = await setup();
+    await expectCode(store.announce(room.code, token, "안녕"), "forbidden");
+    await expectCode(store.announce(room.code, "", "안녕"), "unauthorized");
+    await expectCode(store.announce(room.code, hostToken, "   "), "invalid_input");
+    await expectCode(store.announce(room.code, hostToken, 5), "invalid_input");
+    await expectCode(
+      store.announce(room.code, hostToken, "가".repeat(ANNOUNCEMENT_MAX_LENGTH + 1)),
+      "invalid_input",
+    );
+    const sent = await store.announce(room.code, hostToken, "  쉬는 시간  ");
+    expect(sent).toMatchObject({ text: "쉬는 시간", createdAt: clock });
+  });
+
+  it("shows the latest first to host and participants and keeps a short history", async () => {
+    const { room, hostToken, token } = await setup();
+    for (let i = 0; i < ANNOUNCEMENT_HISTORY_SIZE + 2; i++) {
+      await store.announce(room.code, hostToken, `공지 ${i}`);
+      clock += ANNOUNCEMENT_RATE_LIMIT_MS;
+    }
+    const last = `공지 ${ANNOUNCEMENT_HISTORY_SIZE + 1}`;
+    for (const t of [hostToken, token]) {
+      const { announcements } = await store.getSnapshot(room.code, t);
+      expect(announcements).toHaveLength(ANNOUNCEMENT_HISTORY_SIZE);
+      expect(announcements[0].text).toBe(last);
+    }
+  });
+
+  it("rate limits the host and notifies subscribers", async () => {
+    const { room, hostToken } = await setup();
+    const listener = vi.fn();
+    store.subscribe(room.code, listener);
+    await store.announce(room.code, hostToken, "하나");
+    expect(listener).toHaveBeenCalledTimes(1);
+    await expectCode(store.announce(room.code, hostToken, "둘"), "rate_limited");
+    expect(listener).toHaveBeenCalledTimes(1);
+    clock += ANNOUNCEMENT_RATE_LIMIT_MS;
+    await expect(store.announce(room.code, hostToken, "둘")).resolves.toMatchObject({ text: "둘" });
   });
 });

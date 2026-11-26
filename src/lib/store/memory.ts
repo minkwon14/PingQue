@@ -1,4 +1,10 @@
-import { MAX_PARTICIPANTS, REQUEST_RATE_LIMIT_MS, ROOM_TTL_MS } from "@/lib/config";
+import {
+  ANNOUNCEMENT_HISTORY_SIZE,
+  ANNOUNCEMENT_RATE_LIMIT_MS,
+  MAX_PARTICIPANTS,
+  REQUEST_RATE_LIMIT_MS,
+  ROOM_TTL_MS,
+} from "@/lib/config";
 import { DomainError } from "@/lib/domain/errors";
 import {
   canTransition,
@@ -10,11 +16,13 @@ import {
   rateLimitRetryAfter,
   resolveSelections,
   resolveText,
+  validateAnnouncementText,
   validateButtons,
   validateParticipantInput,
 } from "@/lib/domain/rules";
 import { getTemplate, type Template } from "@/lib/domain/templates";
 import type {
+  Announcement,
   Participant,
   PingRequest,
   PublicRoom,
@@ -46,6 +54,7 @@ interface RoomState {
   receivers: StoredReceiver[];
   participants: StoredParticipant[];
   requests: PingRequest[];
+  announcements: Announcement[];
 }
 
 type Actor =
@@ -111,6 +120,7 @@ export class MemoryRoomStore implements RoomStore {
       receivers: [host],
       participants: [],
       requests: [],
+      announcements: [],
     });
     return { room, hostToken };
   }
@@ -170,6 +180,7 @@ export class MemoryRoomStore implements RoomStore {
     const base = {
       room: state.room,
       participantCount: state.participants.length,
+      announcements: state.announcements.map((a) => ({ ...a })),
       serverNow: this.now(),
     };
     if (actor.kind === "receiver") {
@@ -258,6 +269,27 @@ export class MemoryRoomStore implements RoomStore {
     state.room = { ...state.room, buttons: validateButtons(buttons) };
     this.notify(state.room.code);
     return state.room.buttons.map((b) => ({ ...b }));
+  }
+
+  async announce(code: string, token: string, text: unknown): Promise<Announcement> {
+    const state = this.requireActiveRoom(code);
+    if (this.authenticate(state, token).kind !== "receiver") {
+      throw new DomainError("forbidden", "호스트만 공지를 보낼 수 있어요.");
+    }
+    const value = validateAnnouncementText(text);
+    const now = this.now();
+    const retryAfter = rateLimitRetryAfter(
+      state.announcements[0]?.createdAt,
+      now,
+      ANNOUNCEMENT_RATE_LIMIT_MS,
+    );
+    if (retryAfter > 0) {
+      throw new DomainError("rate_limited", "공지를 너무 빠르게 보내고 있어요.", retryAfter);
+    }
+    const announcement: Announcement = { id: randomUUID(), text: value, createdAt: now };
+    state.announcements = [announcement, ...state.announcements].slice(0, ANNOUNCEMENT_HISTORY_SIZE);
+    this.notify(state.room.code);
+    return { ...announcement };
   }
 
   async updateRequestStatus(

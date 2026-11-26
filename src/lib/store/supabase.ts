@@ -4,7 +4,13 @@ import {
   type RealtimeChannel,
   type SupabaseClient,
 } from "@supabase/supabase-js";
-import { MAX_PARTICIPANTS, REQUEST_RATE_LIMIT_MS, ROOM_TTL_MS } from "@/lib/config";
+import {
+  ANNOUNCEMENT_HISTORY_SIZE,
+  ANNOUNCEMENT_RATE_LIMIT_MS,
+  MAX_PARTICIPANTS,
+  REQUEST_RATE_LIMIT_MS,
+  ROOM_TTL_MS,
+} from "@/lib/config";
 import { DomainError, type DomainErrorCode } from "@/lib/domain/errors";
 import {
   canTransition,
@@ -16,11 +22,13 @@ import {
   rateLimitRetryAfter,
   resolveSelections,
   resolveText,
+  validateAnnouncementText,
   validateButtons,
   validateParticipantInput,
 } from "@/lib/domain/rules";
 import { getTemplate } from "@/lib/domain/templates";
 import type {
+  Announcement,
   Participant,
   PingRequest,
   PublicRoom,
@@ -29,7 +37,7 @@ import type {
   RoomButton,
   RoomSnapshot,
 } from "@/lib/domain/types";
-import { hashToken, newToken, randomInt } from "./crypto";
+import { hashToken, newToken, randomInt, randomUUID } from "./crypto";
 import type {
   CreateRequestResult,
   CreateRoomResult,
@@ -43,6 +51,7 @@ interface RoomRow {
   template_id: string;
   max_participants: number;
   buttons: RoomButton[];
+  announcements: Announcement[];
   created_at: string;
   expires_at: string;
 }
@@ -264,6 +273,7 @@ export class SupabaseRoomStore implements RoomStore {
     const base = {
       room: toRoom(room),
       participantCount: countResult.count ?? 0,
+      announcements: room.announcements ?? [],
       serverNow: Date.now(),
     };
 
@@ -390,6 +400,26 @@ export class SupabaseRoomStore implements RoomStore {
     const updated = await this.db.from("rooms").update({ buttons: valid }).eq("id", room.id);
     if (updated.error) fail(updated.error);
     return valid;
+  }
+
+  async announce(code: string, token: string, text: unknown): Promise<Announcement> {
+    const room = await this.requireActiveRoom(code);
+    const actor = await this.authenticate(room, token);
+    if (actor.kind !== "receiver") {
+      throw new DomainError("forbidden", "호스트만 공지를 보낼 수 있어요.");
+    }
+    const value = validateAnnouncementText(text);
+    const now = Date.now();
+    const current = room.announcements ?? [];
+    const retryAfter = rateLimitRetryAfter(current[0]?.createdAt, now, ANNOUNCEMENT_RATE_LIMIT_MS);
+    if (retryAfter > 0) {
+      throw new DomainError("rate_limited", "공지를 너무 빠르게 보내고 있어요.", retryAfter);
+    }
+    const announcement: Announcement = { id: randomUUID(), text: value, createdAt: now };
+    const next = [announcement, ...current].slice(0, ANNOUNCEMENT_HISTORY_SIZE);
+    const updated = await this.db.from("rooms").update({ announcements: next }).eq("id", room.id);
+    if (updated.error) fail(updated.error);
+    return announcement;
   }
 
   async updateRequestStatus(

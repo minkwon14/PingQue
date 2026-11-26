@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { HostAnnouncePanel } from "@/components/Announcements";
 import { HostButtonsPanel } from "@/components/HostButtonsPanel";
 import {
   ConnectionBanner,
@@ -255,6 +256,13 @@ export function HostRoom({ code, publicOrigin }: { code: string; publicOrigin?: 
         ) : null}
 
         {actionError ? <p className="text-red-400">{actionError}</p> : null}
+
+        <HostAnnouncePanel
+          code={code}
+          token={token as string}
+          announcements={snapshot.announcements}
+          serverNow={serverNow}
+        />
 
         <HostButtonsPanel code={code} token={token as string} saved={snapshot.room.buttons} />
 

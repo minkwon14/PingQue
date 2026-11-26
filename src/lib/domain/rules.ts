@@ -1,4 +1,5 @@
 import {
+  ANNOUNCEMENT_MAX_LENGTH,
   CUSTOM_BUTTON_LABEL_MAX_LENGTH,
   JOIN_CODE_LENGTH,
   MAX_CUSTOM_BUTTONS,
@@ -99,6 +100,17 @@ export function resolveText(text: unknown): ResolvedSelections {
     );
   }
   return { selections: [], item: label, qualifiers: [], action: "", label };
+}
+
+export function validateAnnouncementText(text: unknown): string {
+  const value = typeof text === "string" ? text.trim() : "";
+  if (value.length < 1 || value.length > ANNOUNCEMENT_MAX_LENGTH) {
+    throw new DomainError(
+      "invalid_input",
+      `공지는 1~${ANNOUNCEMENT_MAX_LENGTH}자로 입력해 주세요.`,
+    );
+  }
+  return value;
 }
 
 export function validateButtons(input: unknown): RoomButton[] {
