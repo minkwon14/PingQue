@@ -70,7 +70,7 @@ export function JoinForm({ code }: { code: string }) {
   if (load.state === "error") {
     const { error: err } = load;
     const title =
-      err.code === "room_expired"
+      err.code === "room_expired" || err.code === "room_closed"
         ? "방이 종료되었어요"
         : err.code === "not_found"
           ? "방을 찾을 수 없어요"

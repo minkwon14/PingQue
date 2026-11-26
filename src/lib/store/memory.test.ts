@@ -6,6 +6,7 @@ import {
   ANNOUNCEMENT_RATE_LIMIT_MS,
   CUSTOM_BUTTON_LABEL_MAX_LENGTH,
   MAX_CUSTOM_BUTTONS,
+  NAME_MAX_LENGTH,
 } from "@/lib/config";
 import { MemoryRoomStore } from "./memory";
 
@@ -385,5 +386,104 @@ describe("announcements", () => {
     expect(listener).toHaveBeenCalledTimes(1);
     clock += ANNOUNCEMENT_RATE_LIMIT_MS;
     await expect(store.announce(room.code, hostToken, "둘")).resolves.toMatchObject({ text: "둘" });
+  });
+});
+
+describe("closing the room", () => {
+  it("is host-only and makes later joins, fetches and requests fail with room_closed", async () => {
+    const { room, hostToken, token } = await setup();
+    await expectCode(store.closeRoom(room.code, token), "forbidden");
+    await expectCode(store.closeRoom(room.code, "bad"), "unauthorized");
+
+    const notify = vi.fn();
+    store.subscribe(room.code, notify);
+    await store.closeRoom(room.code, hostToken);
+    expect(notify).toHaveBeenCalled();
+
+    await expectCode(store.joinRoom(room.code, { name: "x", role: "건반" }), "room_closed");
+    await expectCode(store.joinRoom(room.code, { name: "x", role: "건반", token }), "room_closed");
+    await expectCode(store.getPublicRoom(room.code), "room_closed");
+    await expectCode(store.getSnapshot(room.code, token), "room_closed");
+    await expectCode(store.getSnapshot(room.code, hostToken), "room_closed");
+    await expectCode(store.createRequest(room.code, token, { id: ID_A, selections: SELECTION }), "room_closed");
+  });
+});
+
+describe("leaving the room", () => {
+  it("removes only the caller, cancels their active requests and keeps others intact", async () => {
+    const { room, hostToken, token } = await setup();
+    const other = await store.joinRoom(room.code, { name: "b", role: "드럼" });
+    await store.createRequest(room.code, token, { id: ID_A, selections: SELECTION });
+    await store.createRequest(room.code, other.token, { id: ID_B, selections: SELECTION });
+    clock += 1000;
+    await store.createRequest(room.code, token, { id: ID_C, selections: SELECTION });
+    await store.updateRequestStatus(room.code, hostToken, ID_C, "done");
+
+    const notify = vi.fn();
+    store.subscribe(room.code, notify);
+    const leaving = (await store.getSnapshot(room.code, token)).viewer;
+    const { participantId } = await store.leaveRoom(room.code, token);
+    expect(leaving).toMatchObject({ participant: { id: participantId } });
+    expect(notify).toHaveBeenCalled();
+
+    const snap = await store.getSnapshot(room.code, hostToken);
+    expect(snap.participantCount).toBe(1);
+    expect(snap.participants.map((p) => p.name)).toEqual(["b"]);
+    const byId = new Map(snap.requests.map((r) => [r.id, r.status]));
+    expect(byId.get(ID_A)).toBe("cancelled");
+    expect(byId.get(ID_B)).toBe("received");
+    expect(byId.get(ID_C)).toBe("done");
+    await expect(store.getPublicRoom(room.code)).resolves.toMatchObject({ participantCount: 1 });
+  });
+
+  it("invalidates the device token, frees the slot and is participant-only", async () => {
+    const small = new MemoryRoomStore({ now: () => clock, maxParticipants: 1 });
+    const { room, hostToken } = await small.createRoom({ templateId: "worship" });
+    const { token } = await small.joinRoom(room.code, { name: "a", role: "건반" });
+    await expectCode(small.leaveRoom(room.code, hostToken), "forbidden");
+    await expectCode(small.leaveRoom(room.code, "bad"), "unauthorized");
+    await small.leaveRoom(room.code, token);
+    await expectCode(small.getSnapshot(room.code, token), "unauthorized");
+    await expectCode(small.leaveRoom(room.code, token), "unauthorized");
+    await expect(small.joinRoom(room.code, { name: "b", role: "건반" })).resolves.toBeDefined();
+  });
+});
+
+describe("editing own name and role", () => {
+  it("updates the caller everywhere with the same validation as joining", async () => {
+    const { room, hostToken, token } = await setup();
+    const other = await store.joinRoom(room.code, { name: "b", role: "드럼" });
+    await store.createRequest(room.code, token, { id: ID_A, selections: SELECTION });
+
+    const notify = vi.fn();
+    store.subscribe(room.code, notify);
+    const updated = await store.updateProfile(room.code, token, { name: "  새이름 ", role: "드럼" });
+    expect(updated).toMatchObject({ name: "새이름", role: "드럼" });
+    expect(notify).toHaveBeenCalled();
+
+    const mine = await store.getSnapshot(room.code, token);
+    expect(mine.viewer).toMatchObject({ participant: { name: "새이름", role: "드럼" } });
+    const host = await store.getSnapshot(room.code, hostToken);
+    const sender = host.participants.find((p) => p.id === host.requests[0].senderId);
+    expect(sender).toMatchObject({ name: "새이름", role: "드럼" });
+    expect(host.participants.find((p) => p.name === "b")).toBeDefined();
+    expect((await store.getSnapshot(room.code, other.token)).viewer).toMatchObject({
+      participant: { name: "b", role: "드럼" },
+    });
+  });
+
+  it("rejects invalid input, hosts and unknown tokens without changing anything", async () => {
+    const { room, hostToken, token } = await setup();
+    await expectCode(store.updateProfile(room.code, token, { name: " ", role: "건반" }), "invalid_input");
+    await expectCode(
+      store.updateProfile(room.code, token, { name: "a".repeat(NAME_MAX_LENGTH + 1), role: "건반" }),
+      "invalid_input",
+    );
+    await expectCode(store.updateProfile(room.code, token, { name: "a", role: "없는역할" }), "invalid_input");
+    await expectCode(store.updateProfile(room.code, hostToken, { name: "a", role: "건반" }), "forbidden");
+    await expectCode(store.updateProfile(room.code, "bad", { name: "a", role: "건반" }), "unauthorized");
+    expect((await store.getSnapshot(room.code, token)).viewer).toMatchObject({
+      participant: { name: "민", role: "건반" },
+    });
   });
 });

@@ -51,6 +51,16 @@ export interface RoomStore {
   setButtons(code: string, token: string, buttons: unknown): Promise<RoomButton[]>;
   /** Host only. Makes `text` the active announcement and keeps a short history. */
   announce(code: string, token: string, text: unknown): Promise<Announcement>;
+  /** Host only. Closes the room for everyone; later joins and fetches fail with `room_closed`. */
+  closeRoom(code: string, token: string): Promise<void>;
+  /** Participant only. Removes the caller, cancelling their active requests first. */
+  leaveRoom(code: string, token: string): Promise<{ participantId: string }>;
+  /** Participant only. Changes the caller's own name and role (same validation as joining). */
+  updateProfile(
+    code: string,
+    token: string,
+    input: { name: unknown; role: unknown },
+  ): Promise<Participant>;
   updateRequestStatus(
     code: string,
     token: string,

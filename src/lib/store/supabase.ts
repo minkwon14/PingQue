@@ -54,6 +54,7 @@ interface RoomRow {
   announcements: Announcement[];
   created_at: string;
   expires_at: string;
+  closed_at: string | null;
 }
 
 interface ReceiverRow {
@@ -73,7 +74,8 @@ interface ParticipantRow {
 interface RequestRow {
   id: string;
   room_id: string;
-  sender_id: string;
+  /** Null once the sender left the room; the request is kept as history. */
+  sender_id: string | null;
   target_id: string;
   template_id: string;
   selections: string[];
@@ -94,6 +96,7 @@ type Actor =
 
 const DB_ERROR_CODES: DomainErrorCode[] = [
   "room_expired",
+  "room_closed",
   "room_full",
   "rate_limited",
   "invalid_transition",
@@ -137,7 +140,7 @@ const toParticipant = (p: ParticipantRow): Participant => ({
 const toRequest = (r: RequestRow): PingRequest => ({
   id: r.id,
   roomId: r.room_id,
-  senderId: r.sender_id,
+  senderId: r.sender_id ?? "",
   targetId: r.target_id,
   templateId: r.template_id,
   selections: r.selections,
@@ -422,6 +425,62 @@ export class SupabaseRoomStore implements RoomStore {
     return announcement;
   }
 
+  async closeRoom(code: string, token: string): Promise<void> {
+    const room = await this.requireActiveRoom(code);
+    const actor = await this.authenticate(room, token);
+    if (actor.kind !== "receiver") {
+      throw new DomainError("forbidden", "호스트만 방을 종료할 수 있어요.");
+    }
+    const updated = await this.db
+      .from("rooms")
+      .update({ closed_at: new Date().toISOString() })
+      .eq("id", room.id);
+    if (updated.error) fail(updated.error);
+  }
+
+  async leaveRoom(code: string, token: string): Promise<{ participantId: string }> {
+    const room = await this.requireActiveRoom(code);
+    const actor = await this.authenticate(room, token);
+    if (actor.kind !== "participant") {
+      throw new DomainError("forbidden", "참가자만 나갈 수 있어요.");
+    }
+    const id = actor.participant.id;
+    const cancelled = await this.db
+      .from("requests")
+      .update({ status: "cancelled" })
+      .eq("sender_id", id)
+      .in("status", ["received", "confirmed"]);
+    if (cancelled.error) fail(cancelled.error);
+    const removed = await this.db.from("participants").delete().eq("id", id);
+    if (removed.error) fail(removed.error);
+    return { participantId: id };
+  }
+
+  async updateProfile(
+    code: string,
+    token: string,
+    input: { name: unknown; role: unknown },
+  ): Promise<Participant> {
+    const room = await this.requireActiveRoom(code);
+    const actor = await this.authenticate(room, token);
+    if (actor.kind !== "participant") {
+      throw new DomainError("forbidden", "참가자만 내 정보를 바꿀 수 있어요.");
+    }
+    const template = getTemplate(room.template_id);
+    if (!template) throw new Error(`unknown template ${room.template_id}`);
+    const { name, role } = validateParticipantInput(template, input);
+    const updated = unwrap(
+      (await this.db
+        .from("participants")
+        .update({ name, role })
+        .eq("id", actor.participant.id)
+        .select()
+        .single()) as { data: ParticipantRow | null; error: PostgrestError | null },
+    );
+    if (!updated) throw new Error("supabase: participant update returned no row");
+    return toParticipant(updated);
+  }
+
   async updateRequestStatus(
     code: string,
     token: string,
@@ -544,6 +603,9 @@ export class SupabaseRoomStore implements RoomStore {
 
   private async requireActiveRoom(code: string): Promise<RoomRow> {
     const room = await this.requireRoom(code);
+    if (room.closed_at) {
+      throw new DomainError("room_closed", "호스트가 방을 종료했어요.");
+    }
     if (isExpired({ expiresAt: ms(room.expires_at) }, Date.now())) {
       throw new DomainError("room_expired", "방이 종료되었어요.");
     }

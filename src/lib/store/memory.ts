@@ -9,6 +9,7 @@ import { DomainError } from "@/lib/domain/errors";
 import {
   canTransition,
   generateJoinCode,
+  isActive,
   isExpired,
   isRequestStatus,
   isUuid,
@@ -55,6 +56,7 @@ interface RoomState {
   participants: StoredParticipant[];
   requests: PingRequest[];
   announcements: Announcement[];
+  closed: boolean;
 }
 
 type Actor =
@@ -121,6 +123,7 @@ export class MemoryRoomStore implements RoomStore {
       participants: [],
       requests: [],
       announcements: [],
+      closed: false,
     });
     return { room, hostToken };
   }
@@ -292,6 +295,51 @@ export class MemoryRoomStore implements RoomStore {
     return { ...announcement };
   }
 
+  async closeRoom(code: string, token: string): Promise<void> {
+    const state = this.requireActiveRoom(code);
+    if (this.authenticate(state, token).kind !== "receiver") {
+      throw new DomainError("forbidden", "호스트만 방을 종료할 수 있어요.");
+    }
+    state.closed = true;
+    this.notify(state.room.code);
+  }
+
+  async leaveRoom(code: string, token: string): Promise<{ participantId: string }> {
+    const state = this.requireActiveRoom(code);
+    const actor = this.authenticate(state, token);
+    if (actor.kind !== "participant") {
+      throw new DomainError("forbidden", "참가자만 나갈 수 있어요.");
+    }
+    const leaving = actor.participant;
+    const now = this.now();
+    for (const request of state.requests) {
+      if (request.senderId === leaving.id && isActive(request.status)) {
+        request.status = "cancelled";
+        request.cancelledAt = now;
+      }
+    }
+    state.participants = state.participants.filter((p) => p.id !== leaving.id);
+    this.notify(state.room.code);
+    return { participantId: leaving.id };
+  }
+
+  async updateProfile(
+    code: string,
+    token: string,
+    input: { name: unknown; role: unknown },
+  ): Promise<Participant> {
+    const state = this.requireActiveRoom(code);
+    const actor = this.authenticate(state, token);
+    if (actor.kind !== "participant") {
+      throw new DomainError("forbidden", "참가자만 내 정보를 바꿀 수 있어요.");
+    }
+    const { name, role } = validateParticipantInput(state.template, input);
+    actor.participant.name = name;
+    actor.participant.role = role;
+    this.notify(state.room.code);
+    return toParticipant(actor.participant);
+  }
+
   async updateRequestStatus(
     code: string,
     token: string,
@@ -359,6 +407,9 @@ export class MemoryRoomStore implements RoomStore {
 
   private requireActiveRoom(code: string): RoomState {
     const state = this.requireRoom(code);
+    if (state.closed) {
+      throw new DomainError("room_closed", "호스트가 방을 종료했어요.");
+    }
     if (isExpired(state.room, this.now())) {
       throw new DomainError("room_expired", "방이 종료되었어요.");
     }

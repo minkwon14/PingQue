@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { HostAnnouncePanel } from "@/components/Announcements";
 import { HostButtonsPanel } from "@/components/HostButtonsPanel";
 import {
+  ConfirmDialog,
   ConnectionBanner,
   ConnectionIndicator,
   Notice,
@@ -79,6 +80,9 @@ export function HostRoom({ code, publicOrigin }: { code: string; publicOrigin?: 
   const [busy, setBusy] = useState<Set<string>>(new Set());
   const [actionError, setActionError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [confirmClose, setConfirmClose] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const [closed, setClosed] = useState(false);
 
   const participantsById = useMemo(() => {
     const map = new Map<string, Participant>();
@@ -96,6 +100,13 @@ export function HostRoom({ code, publicOrigin }: { code: string; publicOrigin?: 
     return (
       <Notice title="이 기기는 이 방의 호스트가 아니에요" action={home}>
         방을 만든 기기에서 열어 주세요.
+      </Notice>
+    );
+  }
+  if (closed || fatal?.code === "room_closed") {
+    return (
+      <Notice title="방을 종료했어요" action={home}>
+        참가자들은 참여 화면으로 돌아가요.
       </Notice>
     );
   }
@@ -159,6 +170,20 @@ export function HostRoom({ code, publicOrigin }: { code: string; publicOrigin?: 
         next.delete(request.id);
         return next;
       });
+    }
+  }
+
+  async function closeRoom() {
+    setClosing(true);
+    setActionError(null);
+    try {
+      await api.closeRoom(code, token as string);
+      setClosed(true);
+    } catch (error) {
+      setConfirmClose(false);
+      setActionError(actionErrorMessage(error, "방을 종료하지 못했어요."));
+    } finally {
+      setClosing(false);
     }
   }
 
@@ -298,7 +323,7 @@ export function HostRoom({ code, publicOrigin }: { code: string; publicOrigin?: 
               {finished.map((r) => (
                 <li key={r.id} className="flex items-center justify-between gap-3 rounded-2xl bg-zinc-900/60 px-4 py-3 text-zinc-400">
                   <span className="min-w-0 truncate">
-                    <b className="text-zinc-300">{participantsById.get(r.senderId)?.name ?? "?"}</b> · {r.label}
+                    <b className="text-zinc-300">{participantsById.get(r.senderId)?.name ?? "나간 참가자"}</b> · {r.label}
                   </span>
                   <StatusBadge status={r.status} />
                 </li>
@@ -308,9 +333,27 @@ export function HostRoom({ code, publicOrigin }: { code: string; publicOrigin?: 
         ) : null}
       </main>
 
-      <footer className="px-4 py-3 text-center text-xs text-zinc-600">
+      <footer className="flex flex-col items-center gap-3 px-4 py-3 text-center text-xs text-zinc-600">
+        <button
+          type="button"
+          onClick={() => setConfirmClose(true)}
+          className="min-h-12 rounded-2xl bg-zinc-900 px-6 text-base font-semibold text-red-300 active:bg-zinc-800"
+        >
+          방 종료
+        </button>
         {wakeLock ? "화면 켜짐 유지 중" : "이 화면을 계속 켜 두세요 (자동 화면 켜짐 유지를 쓸 수 없어요)"}
       </footer>
+      {confirmClose ? (
+        <ConfirmDialog
+          title="방을 종료할까요?"
+          confirmLabel="방 종료"
+          busy={closing}
+          onConfirm={() => void closeRoom()}
+          onCancel={() => setConfirmClose(false)}
+        >
+          모든 참가자가 방에서 나가게 되고, 같은 코드로 다시 참여할 수 없어요.
+        </ConfirmDialog>
+      ) : null}
     </div>
   );
 }
@@ -339,7 +382,7 @@ function RequestCard({
     >
       <div className="flex items-start justify-between gap-3">
         <div className="text-zinc-400">
-          <b className="text-zinc-100">{sender?.name ?? "알 수 없음"}</b>
+          <b className="text-zinc-100">{sender?.name ?? "나간 참가자"}</b>
           {sender ? ` · ${sender.role}` : ""}
         </div>
         <div className="flex items-center gap-2">

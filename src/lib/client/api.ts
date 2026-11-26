@@ -93,6 +93,12 @@ export const api = {
     }),
   announce: (code: string, token: string, text: string) =>
     call<Announcement>(`${room(code)}/announcements`, { method: "POST", token, body: { text } }),
+  closeRoom: (code: string, token: string) =>
+    call<{ ok: true }>(`${room(code)}/close`, { method: "POST", token }),
+  leaveRoom: (code: string, token: string) =>
+    call<{ ok: true }>(`${room(code)}/me`, { method: "DELETE", token }),
+  updateProfile: (code: string, token: string, input: { name: string; role: string }) =>
+    call<Participant>(`${room(code)}/me`, { method: "PATCH", token, body: input }),
   setStatus: (code: string, token: string, id: string, status: RequestStatus) =>
     call<PingRequest>(`${room(code)}/requests/${id}`, {
       method: "PATCH",
