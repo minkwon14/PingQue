@@ -82,7 +82,7 @@ describe("rateLimitRetryAfter", () => {
 describe("join codes and expiry", () => {
   it("generates codes from the unambiguous alphabet", () => {
     const code = generateJoinCode(() => 0);
-    expect(code).toHaveLength(6);
+    expect(code).toHaveLength(8);
     expect(code).toMatch(/^[A-HJKMNP-Z2-9]+$/);
   });
   it("normalizes user-typed codes", () => {

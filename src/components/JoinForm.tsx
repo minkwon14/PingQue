@@ -74,7 +74,9 @@ export function JoinForm({ code }: { code: string }) {
         ? "방이 종료되었어요"
         : err.code === "not_found"
           ? "방을 찾을 수 없어요"
-          : "연결할 수 없어요";
+          : err.code === "rate_limited"
+            ? "잠시 후 다시 시도해 주세요"
+            : "연결할 수 없어요";
     return (
       <Notice
         title={title}

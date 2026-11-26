@@ -30,7 +30,7 @@ describe("rooms and joining", () => {
   it("creates a room that expires after the configured lifetime", async () => {
     const { room } = await store.createRoom({ templateId: "worship" });
     expect(room.expiresAt - room.createdAt).toBe(30 * 60 * 1000);
-    expect(room.code).toHaveLength(6);
+    expect(room.code).toHaveLength(8);
     await expect(store.getPublicRoom(room.code.toLowerCase())).resolves.toMatchObject({
       participantCount: 0,
     });

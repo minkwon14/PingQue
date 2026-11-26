@@ -57,7 +57,7 @@ function useWakeLock(): boolean {
   return active;
 }
 
-export function HostRoom({ code }: { code: string }) {
+export function HostRoom({ code, publicOrigin }: { code: string; publicOrigin?: string }) {
   const token = useStoredValue(hostKey(code));
   const { snapshot, fatal, offline, clockOffset, newRequestTick, applyRequest } = useRoomSnapshot(
     code,
@@ -124,8 +124,9 @@ export function HostRoom({ code }: { code: string }) {
     .slice(0, 10);
   const [primary, ...waiting] = received;
 
-  const joinUrl = location ? `${location.origin}/join/${code}` : "";
-  const isLocalhost = location ? /^(localhost|127\.|\[?::1\]?$)/.test(location.hostname) : false;
+  const joinOrigin = publicOrigin ?? location?.origin;
+  const joinUrl = joinOrigin ? `${joinOrigin}/join/${code}` : "";
+  const isLocalhost = location && !publicOrigin ? /^(localhost|127\.|\[?::1\]?$)/.test(location.hostname) : false;
   const showInvite = inviteOpen ?? snapshot.participantCount === 0;
 
   async function setStatus(request: PingRequest, status: RequestStatus) {

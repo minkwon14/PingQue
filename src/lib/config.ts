@@ -12,6 +12,12 @@ export const REQUEST_RATE_LIMIT_MS = 1000;
 /** How long a participant can undo a request they just sent (client-side UX). */
 export const UNDO_WINDOW_MS = 5000;
 
-export const JOIN_CODE_LENGTH = 6;
+/** Legacy 6-character codes keep resolving; new rooms get this length. */
+export const JOIN_CODE_LENGTH = 8;
+
+/** Join attempts (room lookup + join) allowed per client IP per window. */
+export const JOIN_ATTEMPT_LIMIT = 30;
+
+export const JOIN_ATTEMPT_WINDOW_MS = 60 * 1000;
 
 export const NAME_MAX_LENGTH = 20;
