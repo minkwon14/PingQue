@@ -83,3 +83,46 @@ export const primaryButton =
   "min-h-14 rounded-2xl bg-indigo-500 px-6 text-lg font-bold text-white active:bg-indigo-400 disabled:opacity-40";
 export const secondaryButton =
   "min-h-14 rounded-2xl bg-zinc-800 px-6 text-lg font-semibold text-zinc-100 active:bg-zinc-700 disabled:opacity-40";
+
+export function ConfirmDialog({
+  title,
+  confirmLabel,
+  busy,
+  onConfirm,
+  onCancel,
+  children,
+}: {
+  title: string;
+  confirmLabel: string;
+  busy?: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 p-4">
+      <div
+        role="alertdialog"
+        aria-modal="true"
+        aria-label={title}
+        className="flex w-full max-w-sm flex-col gap-4 rounded-3xl bg-zinc-900 p-6"
+      >
+        <h2 className="text-xl font-bold">{title}</h2>
+        {children ? <p className="text-zinc-400">{children}</p> : null}
+        <div className="flex gap-3">
+          <button type="button" disabled={busy} onClick={onCancel} className={`${secondaryButton} flex-1`}>
+            취소
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onConfirm}
+            className="min-h-14 flex-1 rounded-2xl bg-red-600 px-6 text-lg font-bold text-white active:bg-red-500 disabled:opacity-40"
+          >
+            {busy ? "처리 중…" : confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

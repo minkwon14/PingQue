@@ -4,6 +4,7 @@ export type DomainErrorCode =
   | "forbidden"
   | "not_found"
   | "room_expired"
+  | "room_closed"
   | "room_full"
   | "id_conflict"
   | "invalid_transition"
@@ -15,6 +16,7 @@ const STATUS: Record<DomainErrorCode, number> = {
   forbidden: 403,
   not_found: 404,
   room_expired: 410,
+  room_closed: 410,
   room_full: 409,
   id_conflict: 409,
   invalid_transition: 409,

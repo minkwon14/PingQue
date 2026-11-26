@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnnouncementBanner } from "@/components/Announcements";
+import { ParticipantProfile } from "@/components/ParticipantProfile";
 import { QuickButtons } from "@/components/QuickButtons";
 import { ConnectionBanner, ConnectionIndicator, Notice, StatusBadge } from "@/components/ui";
 import { actionErrorMessage, ApiError, api } from "@/lib/client/api";
@@ -24,7 +25,7 @@ export function ParticipantRoom({ code }: { code: string }) {
   const router = useRouter();
   const raw = useStoredValue(deviceKey(code));
   const device = useMemo(() => parseDevice(raw), [raw]);
-  const { snapshot, fatal, connection, clockOffset, applyRequest } = useRoomSnapshot(
+  const { snapshot, fatal, connection, clockOffset, applyRequest, refresh } = useRoomSnapshot(
     code,
     device?.token,
   );
@@ -39,6 +40,16 @@ export function ParticipantRoom({ code }: { code: string }) {
 
   const needsJoin = raw === null || (typeof raw === "string" && !device);
   const lostAccess = fatal !== null && [401, 403, 404].includes(fatal.status);
+  const roomClosed = fatal?.code === "room_closed";
+
+  useEffect(() => {
+    if (!roomClosed) return;
+    const timer = window.setTimeout(() => {
+      writeStored(deviceKey(code), null);
+      router.replace(`/join/${code}`);
+    }, 3000);
+    return () => window.clearTimeout(timer);
+  }, [roomClosed, code, router]);
 
   useEffect(() => {
     if (needsJoin) {
@@ -49,6 +60,9 @@ export function ParticipantRoom({ code }: { code: string }) {
     }
   }, [needsJoin, lostAccess, code, router]);
 
+  if (roomClosed) {
+    return <Notice title="호스트가 방을 종료했어요">잠시 후 참여 화면으로 돌아가요.</Notice>;
+  }
   if (fatal?.status === 410) {
     return (
       <Notice
@@ -283,6 +297,15 @@ export function ParticipantRoom({ code }: { code: string }) {
             </ul>
           )}
         </section>
+
+        <ParticipantProfile
+          code={code}
+          token={token}
+          name={me.name}
+          role={me.role}
+          roles={template.roles}
+          onChanged={() => void refresh()}
+        />
       </main>
     </div>
   );

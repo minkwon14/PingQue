@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { PRESENCE_TTL_MS } from "@/lib/config";
-import { connectedCount, touchPresence } from "./presence";
+import { clearPresence, connectedCount, touchPresence } from "./presence";
 
 describe("presence", () => {
   it("counts participants seen within the TTL and drops stale ones", () => {
@@ -15,5 +15,15 @@ describe("presence", () => {
   it("is case-insensitive on the join code", () => {
     touchPresence("abc234", "a", 5);
     expect(connectedCount("ABC234", 5)).toBe(1);
+  });
+
+  it("drops a participant immediately when cleared", () => {
+    touchPresence("CLRPRS", "a", 5);
+    touchPresence("CLRPRS", "b", 5);
+    clearPresence("clrprs", "a");
+    expect(connectedCount("CLRPRS", 5)).toBe(1);
+    clearPresence("CLRPRS", "b");
+    expect(connectedCount("CLRPRS", 5)).toBe(0);
+    clearPresence("CLRPRS", "missing");
   });
 });

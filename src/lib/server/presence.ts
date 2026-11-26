@@ -24,6 +24,14 @@ export function touchPresence(code: string, participantId: string, now = Date.no
   room.set(participantId, now);
 }
 
+export function clearPresence(code: string, participantId: string): void {
+  const key = normalizeJoinCode(code);
+  const room = rooms().get(key);
+  if (!room) return;
+  room.delete(participantId);
+  if (room.size === 0) rooms().delete(key);
+}
+
 export function connectedCount(code: string, now = Date.now()): number {
   const key = normalizeJoinCode(code);
   const room = rooms().get(key);
