@@ -34,10 +34,17 @@ export const CUSTOM_BUTTON_LABEL_MAX_LENGTH = 20;
 export const ANNOUNCEMENT_MAX_LENGTH = 60;
 
 /** The latest announcement stays active; this many (including it) are kept as history. */
-export const ANNOUNCEMENT_HISTORY_SIZE = 5;
+export const ANNOUNCEMENT_HISTORY_SIZE = 20;
 
 /** Minimum gap between two announcements from the host. */
 export const ANNOUNCEMENT_RATE_LIMIT_MS = 2000;
 
-/** One-tap phrases the host can announce. */
+/** Initial one-tap announcement phrases; the host can then edit the room's own list. */
 export const ANNOUNCEMENT_PRESETS = ["30초 남았어요", "다음 준비", "쉬는 시간"];
+
+export const MAX_ANNOUNCEMENT_PRESETS = 10;
+
+/** Role choices offered on join (initially the template's roles; host-editable). Joining also accepts custom text. */
+export const MAX_ROLES = 10;
+
+export const ROLE_MAX_LENGTH = 20;

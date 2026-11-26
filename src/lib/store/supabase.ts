@@ -6,6 +6,7 @@ import {
 } from "@supabase/supabase-js";
 import {
   ANNOUNCEMENT_HISTORY_SIZE,
+  ANNOUNCEMENT_PRESETS,
   ANNOUNCEMENT_RATE_LIMIT_MS,
   MAX_PARTICIPANTS,
   REQUEST_RATE_LIMIT_MS,
@@ -22,9 +23,11 @@ import {
   rateLimitRetryAfter,
   resolveSelections,
   resolveText,
+  validateAnnouncementPresets,
   validateAnnouncementText,
   validateButtons,
   validateParticipantInput,
+  validateRoles,
 } from "@/lib/domain/rules";
 import { getTemplate } from "@/lib/domain/templates";
 import type {
@@ -51,6 +54,9 @@ interface RoomRow {
   template_id: string;
   max_participants: number;
   buttons: RoomButton[];
+  /** Null until the host sets them; the defaults apply then. */
+  announcement_presets: string[] | null;
+  roles: string[] | null;
   announcements: Announcement[];
   created_at: string;
   expires_at: string;
@@ -119,12 +125,17 @@ function unwrap<T>(result: { data: T | null; error: PostgrestError | null }): T 
 const ms = (iso: string) => Date.parse(iso);
 const msOrNull = (iso: string | null) => (iso ? Date.parse(iso) : null);
 
+const roomRoles = (r: RoomRow): string[] =>
+  r.roles ?? [...(getTemplate(r.template_id)?.roles ?? [])];
+
 const toRoom = (r: RoomRow): Room => ({
   id: r.id,
   code: r.code,
   templateId: r.template_id,
   maxParticipants: r.max_participants,
   buttons: r.buttons ?? [],
+  announcementPresets: r.announcement_presets ?? [...ANNOUNCEMENT_PRESETS],
+  roles: roomRoles(r),
   createdAt: ms(r.created_at),
   expiresAt: ms(r.expires_at),
 });
@@ -173,10 +184,20 @@ export class SupabaseRoomStore implements RoomStore {
     );
   }
 
-  async createRoom(input: { templateId: string; buttons?: unknown }): Promise<CreateRoomResult> {
+  async createRoom(input: {
+    templateId: string;
+    buttons?: unknown;
+    announcementPresets?: unknown;
+    roles?: unknown;
+  }): Promise<CreateRoomResult> {
     const template = getTemplate(input.templateId);
     if (!template) throw new DomainError("invalid_input", "알 수 없는 템플릿이에요.");
     const buttons = input.buttons === undefined ? [] : validateButtons(input.buttons);
+    const announcementPresets =
+      input.announcementPresets === undefined
+        ? [...ANNOUNCEMENT_PRESETS]
+        : validateAnnouncementPresets(input.announcementPresets);
+    const roles = input.roles === undefined ? [...template.roles] : validateRoles(input.roles);
 
     const now = Date.now();
     let room: RoomRow | null = null;
@@ -188,6 +209,8 @@ export class SupabaseRoomStore implements RoomStore {
           template_id: template.id,
           max_participants: MAX_PARTICIPANTS,
           buttons,
+          announcement_presets: announcementPresets,
+          roles,
           created_at: new Date(now).toISOString(),
           expires_at: new Date(now + ROOM_TTL_MS).toISOString(),
         })
@@ -223,6 +246,7 @@ export class SupabaseRoomStore implements RoomStore {
       code: room.code,
       templateId: room.template_id,
       expiresAt: ms(room.expires_at),
+      roles: roomRoles(room),
       participantCount: count.count ?? 0,
       maxParticipants: room.max_participants,
     };
@@ -233,9 +257,7 @@ export class SupabaseRoomStore implements RoomStore {
     input: { name: unknown; role: unknown; token?: string },
   ): Promise<JoinRoomResult> {
     const room = await this.requireActiveRoom(code);
-    const template = getTemplate(room.template_id);
-    if (!template) throw new Error(`unknown template ${room.template_id}`);
-    const { name, role } = validateParticipantInput(template, input);
+    const { name, role } = validateParticipantInput(input);
 
     if (input.token) {
       const existing = unwrap(
@@ -405,6 +427,33 @@ export class SupabaseRoomStore implements RoomStore {
     return valid;
   }
 
+  async setAnnouncementPresets(code: string, token: string, presets: unknown): Promise<string[]> {
+    const room = await this.requireActiveRoom(code);
+    const actor = await this.authenticate(room, token);
+    if (actor.kind !== "receiver") {
+      throw new DomainError("forbidden", "호스트만 공지 문구를 바꿀 수 있어요.");
+    }
+    const valid = validateAnnouncementPresets(presets);
+    const updated = await this.db
+      .from("rooms")
+      .update({ announcement_presets: valid })
+      .eq("id", room.id);
+    if (updated.error) fail(updated.error);
+    return valid;
+  }
+
+  async setRoles(code: string, token: string, roles: unknown): Promise<string[]> {
+    const room = await this.requireActiveRoom(code);
+    const actor = await this.authenticate(room, token);
+    if (actor.kind !== "receiver") {
+      throw new DomainError("forbidden", "호스트만 역할 목록을 바꿀 수 있어요.");
+    }
+    const valid = validateRoles(roles);
+    const updated = await this.db.from("rooms").update({ roles: valid }).eq("id", room.id);
+    if (updated.error) fail(updated.error);
+    return valid;
+  }
+
   async announce(code: string, token: string, text: unknown): Promise<Announcement> {
     const room = await this.requireActiveRoom(code);
     const actor = await this.authenticate(room, token);
@@ -466,9 +515,7 @@ export class SupabaseRoomStore implements RoomStore {
     if (actor.kind !== "participant") {
       throw new DomainError("forbidden", "참가자만 내 정보를 바꿀 수 있어요.");
     }
-    const template = getTemplate(room.template_id);
-    if (!template) throw new Error(`unknown template ${room.template_id}`);
-    const { name, role } = validateParticipantInput(template, input);
+    const { name, role } = validateParticipantInput(input);
     const updated = unwrap(
       (await this.db
         .from("participants")

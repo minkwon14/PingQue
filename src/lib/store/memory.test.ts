@@ -3,11 +3,16 @@ import { DomainError, type DomainErrorCode } from "@/lib/domain/errors";
 import {
   ANNOUNCEMENT_HISTORY_SIZE,
   ANNOUNCEMENT_MAX_LENGTH,
+  ANNOUNCEMENT_PRESETS,
   ANNOUNCEMENT_RATE_LIMIT_MS,
   CUSTOM_BUTTON_LABEL_MAX_LENGTH,
+  MAX_ANNOUNCEMENT_PRESETS,
   MAX_CUSTOM_BUTTONS,
+  MAX_ROLES,
   NAME_MAX_LENGTH,
+  ROLE_MAX_LENGTH,
 } from "@/lib/config";
+import { getTemplate } from "@/lib/domain/templates";
 import { MemoryRoomStore } from "./memory";
 
 const SELECTION = ["keyboard", "my-monitor", "louder"];
@@ -389,6 +394,94 @@ describe("announcements", () => {
   });
 });
 
+describe("announcement presets", () => {
+  it("starts with the defaults and is replaced by the host for every viewer", async () => {
+    const { room, hostToken, token } = await setup();
+    expect(room.announcementPresets).toEqual(ANNOUNCEMENT_PRESETS);
+    await expectCode(store.setAnnouncementPresets(room.code, token, ["하나"]), "forbidden");
+    await expectCode(store.setAnnouncementPresets(room.code, "", ["하나"]), "unauthorized");
+
+    const listener = vi.fn();
+    store.subscribe(room.code, listener);
+    await expect(
+      store.setAnnouncementPresets(room.code, hostToken, ["  입장해 주세요 ", "마무리", "입장해 주세요"]),
+    ).resolves.toEqual(["입장해 주세요", "마무리"]);
+    expect(listener).toHaveBeenCalledTimes(1);
+    for (const t of [hostToken, token]) {
+      const snapshot = await store.getSnapshot(room.code, t);
+      expect(snapshot.room.announcementPresets).toEqual(["입장해 주세요", "마무리"]);
+    }
+    await expect(store.setAnnouncementPresets(room.code, hostToken, [])).resolves.toEqual([]);
+  });
+
+  it("rejects invalid lists without changing the stored one", async () => {
+    const { room, hostToken } = await setup();
+    const many = Array.from({ length: MAX_ANNOUNCEMENT_PRESETS + 1 }, (_, i) => `문구 ${i}`);
+    await expectCode(store.setAnnouncementPresets(room.code, hostToken, many), "invalid_input");
+    await expectCode(
+      store.setAnnouncementPresets(room.code, hostToken, ["가".repeat(ANNOUNCEMENT_MAX_LENGTH + 1)]),
+      "invalid_input",
+    );
+    await expectCode(store.setAnnouncementPresets(room.code, hostToken, [" "]), "invalid_input");
+    await expectCode(store.setAnnouncementPresets(room.code, hostToken, "문구"), "invalid_input");
+    const snapshot = await store.getSnapshot(room.code, hostToken);
+    expect(snapshot.room.announcementPresets).toEqual(ANNOUNCEMENT_PRESETS);
+  });
+
+  it("can be provided when creating a room and is validated there", async () => {
+    const created = await store.createRoom({ templateId: "worship", announcementPresets: [" 시작 "] });
+    expect(created.room.announcementPresets).toEqual(["시작"]);
+    await expectCode(
+      store.createRoom({ templateId: "worship", announcementPresets: "x" }),
+      "invalid_input",
+    );
+  });
+});
+
+describe("join roles", () => {
+  it("defaults to the template roles, shown on the public room", async () => {
+    const { room } = await setup();
+    expect(room.roles).toEqual(getTemplate("worship")!.roles);
+    await expect(store.getPublicRoom(room.code)).resolves.toMatchObject({ roles: room.roles });
+  });
+
+  it("is host-only, validated and visible to joiners", async () => {
+    const { room, hostToken, token } = await setup();
+    await expectCode(store.setRoles(room.code, token, ["보컬"]), "forbidden");
+    await expectCode(store.setRoles(room.code, "", ["보컬"]), "unauthorized");
+    await expectCode(
+      store.setRoles(room.code, hostToken, Array.from({ length: MAX_ROLES + 1 }, (_, i) => `역할 ${i}`)),
+      "invalid_input",
+    );
+    await expectCode(
+      store.setRoles(room.code, hostToken, ["가".repeat(ROLE_MAX_LENGTH + 1)]),
+      "invalid_input",
+    );
+
+    await expect(store.setRoles(room.code, hostToken, [" 사회자 ", "게스트"])).resolves.toEqual([
+      "사회자",
+      "게스트",
+    ]);
+    await expect(store.getPublicRoom(room.code)).resolves.toMatchObject({ roles: ["사회자", "게스트"] });
+    expect((await store.getSnapshot(room.code, token)).room.roles).toEqual(["사회자", "게스트"]);
+  });
+
+  it("accepts a custom role on join and profile edit, even outside the list", async () => {
+    const { room, hostToken } = await store.createRoom({ templateId: "worship", roles: ["보컬"] });
+    const joined = await store.joinRoom(room.code, { name: "민", role: "  스태프 " });
+    expect(joined.participant.role).toBe("스태프");
+    await expectCode(store.joinRoom(room.code, { name: "민", role: " " }), "invalid_input");
+
+    const updated = await store.updateProfile(room.code, joined.token, { name: "민", role: "음향" });
+    expect(updated.role).toBe("음향");
+
+    await store.setRoles(room.code, hostToken, []);
+    expect((await store.getSnapshot(room.code, joined.token)).viewer).toMatchObject({
+      participant: { role: "음향" },
+    });
+  });
+});
+
 describe("closing the room", () => {
   it("is host-only and makes later joins, fetches and requests fail with room_closed", async () => {
     const { room, hostToken, token } = await setup();
@@ -479,7 +572,11 @@ describe("editing own name and role", () => {
       store.updateProfile(room.code, token, { name: "a".repeat(NAME_MAX_LENGTH + 1), role: "건반" }),
       "invalid_input",
     );
-    await expectCode(store.updateProfile(room.code, token, { name: "a", role: "없는역할" }), "invalid_input");
+    await expectCode(
+      store.updateProfile(room.code, token, { name: "a", role: "가".repeat(ROLE_MAX_LENGTH + 1) }),
+      "invalid_input",
+    );
+    await expectCode(store.updateProfile(room.code, token, { name: "a", role: " " }), "invalid_input");
     await expectCode(store.updateProfile(room.code, hostToken, { name: "a", role: "건반" }), "forbidden");
     await expectCode(store.updateProfile(room.code, "bad", { name: "a", role: "건반" }), "unauthorized");
     expect((await store.getSnapshot(room.code, token)).viewer).toMatchObject({

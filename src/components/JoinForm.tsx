@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { RolePicker } from "@/components/RolePicker";
 import { Notice, primaryButton } from "@/components/ui";
 import { api, ApiError } from "@/lib/client/api";
 import {
@@ -97,15 +98,15 @@ export function JoinForm({ code }: { code: string }) {
   const full = room.participantCount >= room.maxParticipants;
 
   const nameValue = name ?? profile.name ?? "";
-  const roleValue = role ?? (profile.role && template.roles.includes(profile.role) ? profile.role : null);
+  const roleValue = role ?? profile.role ?? "";
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!roleValue) return;
+    if (!roleValue.trim()) return;
     setBusy(true);
     setError(null);
     try {
-      const result = await api.join(code, { name: nameValue.trim(), role: roleValue });
+      const result = await api.join(code, { name: nameValue.trim(), role: roleValue.trim() });
       writeStored(
         deviceKey(code),
         JSON.stringify({ token: result.token, name: result.participant.name, role: result.participant.role }),
@@ -144,31 +145,12 @@ export function JoinForm({ code }: { code: string }) {
             />
           </label>
 
-          <fieldset className="flex flex-col gap-2">
-            <legend className="mb-2 font-semibold">역할</legend>
-            <div className="grid grid-cols-2 gap-3">
-              {template.roles.map((r) => (
-                <button
-                  key={r}
-                  type="button"
-                  aria-pressed={roleValue === r}
-                  onClick={() => setRole(r)}
-                  className={`min-h-14 rounded-2xl border-2 px-3 text-lg font-semibold ${
-                    roleValue === r
-                      ? "border-indigo-400 bg-indigo-500/20"
-                      : "border-zinc-800 bg-zinc-900"
-                  }`}
-                >
-                  {r}
-                </button>
-              ))}
-            </div>
-          </fieldset>
+          <RolePicker roles={room.roles} value={roleValue} onChange={setRole} />
 
           <button
             type="submit"
             className={primaryButton}
-            disabled={busy || !nameValue.trim() || !roleValue}
+            disabled={busy || !nameValue.trim() || !roleValue.trim()}
           >
             {busy ? "참여 중…" : "참여하기"}
           </button>

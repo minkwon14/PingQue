@@ -69,10 +69,13 @@ async function call<T>(
 const room = (code: string) => `/api/rooms/${encodeURIComponent(code)}`;
 
 export const api = {
-  createRoom: (templateId: string, buttons?: RoomButton[]) =>
+  createRoom: (
+    templateId: string,
+    options: { buttons?: RoomButton[]; announcementPresets?: string[]; roles?: string[] } = {},
+  ) =>
     call<{ room: Room; hostToken: string }>("/api/rooms", {
       method: "POST",
-      body: { templateId, buttons },
+      body: { templateId, ...options },
     }),
   getPublicRoom: (code: string) => call<PublicRoom>(room(code)),
   join: (code: string, input: { name: string; role: string }, token?: string | null) =>
@@ -91,6 +94,14 @@ export const api = {
       token,
       body: { buttons },
     }),
+  setAnnouncementPresets: (code: string, token: string, presets: string[]) =>
+    call<{ presets: string[] }>(`${room(code)}/announcement-presets`, {
+      method: "PUT",
+      token,
+      body: { presets },
+    }),
+  setRoles: (code: string, token: string, roles: string[]) =>
+    call<{ roles: string[] }>(`${room(code)}/roles`, { method: "PUT", token, body: { roles } }),
   announce: (code: string, token: string, text: string) =>
     call<Announcement>(`${room(code)}/announcements`, { method: "POST", token, body: { text } }),
   closeRoom: (code: string, token: string) =>

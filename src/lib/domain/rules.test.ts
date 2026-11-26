@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { ANNOUNCEMENT_MAX_LENGTH, MAX_ANNOUNCEMENT_PRESETS, MAX_ROLES, ROLE_MAX_LENGTH } from "@/lib/config";
 import { DomainError } from "./errors";
 import {
   canTransition,
@@ -7,7 +8,9 @@ import {
   normalizeJoinCode,
   rateLimitRetryAfter,
   resolveSelections,
+  validateAnnouncementPresets,
   validateParticipantInput,
+  validateRoles,
 } from "./rules";
 import { TEMPLATES, getTemplate } from "./templates";
 
@@ -95,13 +98,51 @@ describe("join codes and expiry", () => {
 });
 
 describe("validateParticipantInput", () => {
-  it("trims the name and requires a role from the template", () => {
-    expect(validateParticipantInput(worship, { name: "  민  ", role: "건반" })).toEqual({
+  it("trims the name and accepts any role text of valid length", () => {
+    expect(validateParticipantInput({ name: "  민  ", role: "  건반 " })).toEqual({
       name: "민",
       role: "건반",
     });
-    expect(() => validateParticipantInput(worship, { name: "", role: "건반" })).toThrow(DomainError);
-    expect(() => validateParticipantInput(worship, { name: "민", role: "없는역할" })).toThrow(DomainError);
-    expect(() => validateParticipantInput(worship, { name: "a".repeat(21), role: "건반" })).toThrow(DomainError);
+    expect(validateParticipantInput({ name: "민", role: "스태프" }).role).toBe("스태프");
+    expect(() => validateParticipantInput({ name: "", role: "건반" })).toThrow(DomainError);
+    expect(() => validateParticipantInput({ name: "a".repeat(21), role: "건반" })).toThrow(DomainError);
+  });
+
+  it("rejects empty, non-string and too long roles", () => {
+    for (const role of ["", "   ", 5, null, "가".repeat(ROLE_MAX_LENGTH + 1)]) {
+      expect(() => validateParticipantInput({ name: "민", role })).toThrow(DomainError);
+    }
+  });
+});
+
+describe("validateAnnouncementPresets", () => {
+  it("trims, keeps order, drops duplicates and allows an empty list", () => {
+    expect(validateAnnouncementPresets(["  하나 ", "둘", "하나"])).toEqual(["하나", "둘"]);
+    expect(validateAnnouncementPresets([])).toEqual([]);
+  });
+
+  it("enforces the count and per-item length limits", () => {
+    const many = Array.from({ length: MAX_ANNOUNCEMENT_PRESETS + 1 }, (_, i) => `문구 ${i}`);
+    expect(() => validateAnnouncementPresets(many)).toThrow(DomainError);
+    expect(validateAnnouncementPresets(many.slice(0, MAX_ANNOUNCEMENT_PRESETS))).toHaveLength(
+      MAX_ANNOUNCEMENT_PRESETS,
+    );
+    expect(() => validateAnnouncementPresets(["가".repeat(ANNOUNCEMENT_MAX_LENGTH + 1)])).toThrow(DomainError);
+    expect(validateAnnouncementPresets(["가".repeat(ANNOUNCEMENT_MAX_LENGTH)])).toHaveLength(1);
+    for (const bad of ["x", null, {}, [""], ["  "], [5]]) {
+      expect(() => validateAnnouncementPresets(bad)).toThrow(DomainError);
+    }
+  });
+});
+
+describe("validateRoles", () => {
+  it("trims, drops duplicates and enforces limits", () => {
+    expect(validateRoles([" 보컬 ", "드럼", "보컬"])).toEqual(["보컬", "드럼"]);
+    expect(validateRoles([])).toEqual([]);
+    expect(() =>
+      validateRoles(Array.from({ length: MAX_ROLES + 1 }, (_, i) => `역할 ${i}`)),
+    ).toThrow(DomainError);
+    expect(() => validateRoles(["가".repeat(ROLE_MAX_LENGTH + 1)])).toThrow(DomainError);
+    expect(() => validateRoles("보컬")).toThrow(DomainError);
   });
 });

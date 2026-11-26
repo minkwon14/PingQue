@@ -5,6 +5,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { HostAnnouncePanel } from "@/components/Announcements";
 import { HostButtonsPanel } from "@/components/HostButtonsPanel";
+import { HostListPanel } from "@/components/HostListPanel";
 import {
   ConfirmDialog,
   ConnectionBanner,
@@ -16,9 +17,16 @@ import {
 } from "@/components/ui";
 import { actionErrorMessage, api } from "@/lib/client/api";
 import { formatCountdown, groupedCode, timeAgo } from "@/lib/client/format";
+import { saveHostPresets, saveHostRoles } from "@/lib/client/hostLists";
 import { hostKey, useStoredValue } from "@/lib/client/storage";
 import { useNow } from "@/lib/client/useNow";
 import { useRoomSnapshot } from "@/lib/client/useRoomSnapshot";
+import {
+  ANNOUNCEMENT_MAX_LENGTH,
+  MAX_ANNOUNCEMENT_PRESETS,
+  MAX_ROLES,
+  ROLE_MAX_LENGTH,
+} from "@/lib/config";
 import { getTemplate } from "@/lib/domain/templates";
 import type { Participant, PingRequest, RequestStatus } from "@/lib/domain/types";
 
@@ -285,11 +293,42 @@ export function HostRoom({ code, publicOrigin }: { code: string; publicOrigin?: 
         <HostAnnouncePanel
           code={code}
           token={token as string}
+          presets={snapshot.room.announcementPresets}
           announcements={snapshot.announcements}
           serverNow={serverNow}
         />
 
+        <HostListPanel
+          title="공지 문구"
+          itemName="문구"
+          hint="저장하면 위 공지 버튼에 바로 적용되고, 다음 방을 만들 때도 불러와요."
+          emptyHint="자주 보내는 공지를 버튼으로 만들어 둘 수 있어요."
+          saved={snapshot.room.announcementPresets}
+          maxItems={MAX_ANNOUNCEMENT_PRESETS}
+          maxLength={ANNOUNCEMENT_MAX_LENGTH}
+          onSave={async (items) => {
+            const { presets } = await api.setAnnouncementPresets(code, token as string, items);
+            saveHostPresets(presets);
+            return presets;
+          }}
+        />
+
         <HostButtonsPanel code={code} token={token as string} saved={snapshot.room.buttons} />
+
+        <HostListPanel
+          title="참가 역할 목록"
+          itemName="역할"
+          hint="참가자가 입장할 때 고를 수 있는 역할이에요. 직접 입력도 항상 가능하고, 같은 템플릿으로 다음 방을 만들 때도 불러와요."
+          emptyHint="목록이 비어 있으면 참가자가 역할을 직접 입력해요."
+          saved={snapshot.room.roles}
+          maxItems={MAX_ROLES}
+          maxLength={ROLE_MAX_LENGTH}
+          onSave={async (items) => {
+            const { roles } = await api.setRoles(code, token as string, items);
+            saveHostRoles(snapshot.room.templateId, roles);
+            return roles;
+          }}
+        />
 
         {primary ? (
           <section className="flex flex-col gap-2">

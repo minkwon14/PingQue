@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { RolePicker } from "@/components/RolePicker";
 import { ConfirmDialog, primaryButton, secondaryButton } from "@/components/ui";
 import { actionErrorMessage, api } from "@/lib/client/api";
 import { deviceKey, PROFILE_KEY, writeStored } from "@/lib/client/storage";
@@ -42,7 +43,7 @@ export function ParticipantProfile({
     try {
       const updated = await api.updateProfile(code, token, {
         name: nameValue.trim(),
-        role: roleValue,
+        role: roleValue.trim(),
       });
       writeStored(deviceKey(code), JSON.stringify({ token, name: updated.name, role: updated.role }));
       writeStored(PROFILE_KEY, JSON.stringify({ name: updated.name, role: updated.role }));
@@ -82,29 +83,12 @@ export function ParticipantProfile({
               className="min-h-12 rounded-2xl border-2 border-zinc-800 bg-zinc-950 px-4 text-lg"
             />
           </label>
-          <fieldset className="flex flex-col gap-2">
-            <legend className="mb-2 font-semibold">역할</legend>
-            <div className="grid grid-cols-2 gap-3">
-              {roles.map((r) => (
-                <button
-                  key={r}
-                  type="button"
-                  aria-pressed={roleValue === r}
-                  onClick={() => setRoleValue(r)}
-                  className={`min-h-12 rounded-2xl border-2 px-3 font-semibold ${
-                    roleValue === r ? "border-indigo-400 bg-indigo-500/20" : "border-zinc-800 bg-zinc-950"
-                  }`}
-                >
-                  {r}
-                </button>
-              ))}
-            </div>
-          </fieldset>
+          <RolePicker roles={roles} value={roleValue} onChange={setRoleValue} tone="card" />
           <div className="flex gap-3">
             <button type="button" disabled={busy} onClick={() => setEditing(false)} className={`${secondaryButton} flex-1`}>
               취소
             </button>
-            <button type="submit" disabled={busy || !nameValue.trim()} className={`${primaryButton} flex-1`}>
+            <button type="submit" disabled={busy || !nameValue.trim() || !roleValue.trim()} className={`${primaryButton} flex-1`}>
               {busy ? "저장 중…" : "저장"}
             </button>
           </div>
