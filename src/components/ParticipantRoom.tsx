@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { QuickButtons } from "@/components/QuickButtons";
 import { ConnectionBanner, ConnectionIndicator, Notice, StatusBadge } from "@/components/ui";
 import { actionErrorMessage, ApiError, api } from "@/lib/client/api";
 import { formatCountdown, timeAgo } from "@/lib/client/format";
@@ -88,15 +89,17 @@ export function ParticipantRoom({ code }: { code: string }) {
   const requests = [...snapshot.requests].sort((a, b) => b.createdAt - a.createdAt);
   const undoVisible = undo !== null && now < undo.until;
 
-  async function post(selections: string[]): Promise<PingRequest> {
-    const key = selections.join("|");
+  type SendInput = { selections: string[] } | { text: string };
+
+  async function post(input: SendInput): Promise<PingRequest> {
+    const key = "text" in input ? `text:${input.text}` : input.selections.join("|");
     if (pendingId.current?.key !== key) {
       pendingId.current = { key, id: newRequestId() };
     }
     const { id } = pendingId.current;
     for (let attempt = 1; ; attempt++) {
       try {
-        return await api.sendRequest(code, token, { id, selections });
+        return await api.sendRequest(code, token, { id, ...input });
       } catch (error) {
         const retryable = error instanceof ApiError && error.code === "network";
         if (!retryable || attempt >= SEND_ATTEMPTS) throw error;
@@ -111,10 +114,14 @@ export function ParticipantRoom({ code }: { code: string }) {
       setPicked(next);
       return;
     }
+    await submit({ selections: next });
+  }
+
+  async function submit(input: SendInput) {
     setSending(true);
     setSendError(null);
     try {
-      const request = await post(next);
+      const request = await post(input);
       pendingId.current = null;
       applyRequest(request);
       setPicked([]);
@@ -214,6 +221,14 @@ export function ParticipantRoom({ code }: { code: string }) {
             {sendError ? <p className="text-red-400">{sendError}</p> : null}
           </section>
         )}
+
+        {!expired && picked.length === 0 ? (
+          <QuickButtons
+            shared={snapshot.room.buttons}
+            disabled={locked}
+            onSend={(text) => void submit({ text })}
+          />
+        ) : null}
 
         {undoVisible && undo ? (
           <div

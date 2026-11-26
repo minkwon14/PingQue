@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DomainError, type DomainErrorCode } from "@/lib/domain/errors";
+import { CUSTOM_BUTTON_LABEL_MAX_LENGTH, MAX_CUSTOM_BUTTONS } from "@/lib/config";
 import { MemoryRoomStore } from "./memory";
 
 const SELECTION = ["keyboard", "my-monitor", "louder"];
@@ -263,5 +264,78 @@ describe("subscribe", () => {
     unsubscribe();
     await store.updateRequestStatus(room.code, hostToken, ID_A, "done");
     expect(listener).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("custom buttons", () => {
+  const B1 = { id: ID_A, label: "물 주세요" };
+  const B2 = { id: ID_B, label: "  잠깐만요  " };
+
+  it("lets only the host set buttons, applied to every viewer in order", async () => {
+    const { room, hostToken, token } = await setup();
+    await expectCode(store.setButtons(room.code, token, [B1]), "forbidden");
+    await expectCode(store.setButtons(room.code, "", [B1]), "unauthorized");
+
+    await expect(store.setButtons(room.code, hostToken, [B2, B1])).resolves.toEqual([
+      { id: ID_B, label: "잠깐만요" },
+      B1,
+    ]);
+    for (const t of [hostToken, token]) {
+      const snapshot = await store.getSnapshot(room.code, t);
+      expect(snapshot.room.buttons.map((b) => b.id)).toEqual([ID_B, ID_A]);
+    }
+  });
+
+  it("rejects too many, duplicate, empty, or too long buttons", async () => {
+    const { room, hostToken } = await setup();
+    const many = Array.from({ length: MAX_CUSTOM_BUTTONS + 1 }, (_, i) => ({
+      id: `00000000-0000-4000-8000-${String(i).padStart(12, "0")}`,
+      label: `b${i}`,
+    }));
+    await expectCode(store.setButtons(room.code, hostToken, many), "invalid_input");
+    await expectCode(store.setButtons(room.code, hostToken, [B1, B1]), "invalid_input");
+    await expectCode(store.setButtons(room.code, hostToken, [{ ...B1, label: " " }]), "invalid_input");
+    await expectCode(
+      store.setButtons(room.code, hostToken, [{ ...B1, label: "가".repeat(CUSTOM_BUTTON_LABEL_MAX_LENGTH + 1) }]),
+      "invalid_input",
+    );
+    await expectCode(store.setButtons(room.code, hostToken, "nope"), "invalid_input");
+  });
+
+  it("preloads buttons when creating a room and validates them", async () => {
+    const { room } = await store.createRoom({ templateId: "worship", buttons: [B1] });
+    expect(room.buttons).toEqual([B1]);
+    await expectCode(store.createRoom({ templateId: "worship", buttons: [{ id: "x", label: "a" }] }), "invalid_input");
+    expect((await store.createRoom({ templateId: "worship" })).room.buttons).toEqual([]);
+  });
+
+  it("notifies subscribers when the host changes buttons", async () => {
+    const { room, hostToken } = await setup();
+    const listener = vi.fn();
+    store.subscribe(room.code, listener);
+    await store.setButtons(room.code, hostToken, [B1]);
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it("sends a text request through the same path and limits", async () => {
+    const { room, hostToken, token } = await setup();
+    const { request, created } = await store.createRequest(room.code, token, {
+      id: ID_A,
+      text: " 물 주세요 ",
+    });
+    expect(created).toBe(true);
+    expect(request).toMatchObject({ label: "물 주세요", item: "물 주세요", selections: [], action: "" });
+    expect((await store.getSnapshot(room.code, hostToken)).requests).toHaveLength(1);
+
+    await expect(
+      store.createRequest(room.code, token, { id: ID_A, text: "물 주세요" }),
+    ).resolves.toMatchObject({ created: false });
+    await expectCode(store.createRequest(room.code, token, { id: ID_B, text: "또" }), "rate_limited");
+    clock += 1000;
+    await expectCode(store.createRequest(room.code, token, { id: ID_B, text: "  " }), "invalid_input");
+    await expectCode(
+      store.createRequest(room.code, token, { id: ID_B, text: "가".repeat(CUSTOM_BUTTON_LABEL_MAX_LENGTH + 1) }),
+      "invalid_input",
+    );
   });
 });

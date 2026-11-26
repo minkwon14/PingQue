@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ButtonListEditor } from "@/components/ButtonListEditor";
 import { secondaryButton, primaryButton } from "@/components/ui";
-import { api } from "@/lib/client/api";
+import { actionErrorMessage, api } from "@/lib/client/api";
 import { saveHostButtons } from "@/lib/client/buttons";
 import { MAX_CUSTOM_BUTTONS } from "@/lib/config";
 import type { RoomButton } from "@/lib/domain/types";
@@ -32,7 +32,7 @@ export function HostButtonsPanel({
       saveHostButtons(buttons);
       setDraft(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "저장하지 못했어요.");
+      setError(actionErrorMessage(e, "저장하지 못했어요."));
     } finally {
       setSaving(false);
     }
