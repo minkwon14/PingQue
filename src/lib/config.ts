@@ -29,3 +29,15 @@ export const PRESENCE_TTL_MS = 15_000;
 export const MAX_CUSTOM_BUTTONS = 8;
 
 export const CUSTOM_BUTTON_LABEL_MAX_LENGTH = 20;
+
+/** Host announcement shown to everyone in the room. */
+export const ANNOUNCEMENT_MAX_LENGTH = 60;
+
+/** The latest announcement stays active; this many (including it) are kept as history. */
+export const ANNOUNCEMENT_HISTORY_SIZE = 5;
+
+/** Minimum gap between two announcements from the host. */
+export const ANNOUNCEMENT_RATE_LIMIT_MS = 2000;
+
+/** One-tap phrases the host can announce. */
+export const ANNOUNCEMENT_PRESETS = ["30초 남았어요", "다음 준비", "쉬는 시간"];

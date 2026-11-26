@@ -1,4 +1,5 @@
 import type {
+  Announcement,
   PingRequest,
   PublicRoom,
   RequestStatus,
@@ -90,6 +91,8 @@ export const api = {
       token,
       body: { buttons },
     }),
+  announce: (code: string, token: string, text: string) =>
+    call<Announcement>(`${room(code)}/announcements`, { method: "POST", token, body: { text } }),
   setStatus: (code: string, token: string, id: string, status: RequestStatus) =>
     call<PingRequest>(`${room(code)}/requests/${id}`, {
       method: "PATCH",

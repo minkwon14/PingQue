@@ -8,6 +8,13 @@ export interface RoomButton {
   label: string;
 }
 
+/** Host announcement shown to everyone in the room. */
+export interface Announcement {
+  id: string;
+  text: string;
+  createdAt: number;
+}
+
 export interface Room {
   id: string;
   code: string;
@@ -77,5 +84,7 @@ export interface RoomSnapshot {
   connectedCount?: number;
   /** Receivers see all requests; participants see only their own. */
   requests: PingRequest[];
+  /** Newest first. The first entry is the active announcement. */
+  announcements: Announcement[];
   serverNow: number;
 }

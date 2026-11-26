@@ -1,4 +1,5 @@
 import type {
+  Announcement,
   Participant,
   PingRequest,
   PublicRoom,
@@ -48,6 +49,8 @@ export interface RoomStore {
   ): Promise<CreateRequestResult>;
   /** Host only. Replaces the room's shared quick buttons. */
   setButtons(code: string, token: string, buttons: unknown): Promise<RoomButton[]>;
+  /** Host only. Makes `text` the active announcement and keeps a short history. */
+  announce(code: string, token: string, text: unknown): Promise<Announcement>;
   updateRequestStatus(
     code: string,
     token: string,

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { AnnouncementBanner } from "@/components/Announcements";
 import { QuickButtons } from "@/components/QuickButtons";
 import { ConnectionBanner, ConnectionIndicator, Notice, StatusBadge } from "@/components/ui";
 import { actionErrorMessage, ApiError, api } from "@/lib/client/api";
@@ -177,6 +178,7 @@ export function ParticipantRoom({ code }: { code: string }) {
       </header>
 
       <ConnectionBanner connection={connection} />
+      <AnnouncementBanner code={code} announcement={snapshot.announcements[0]} />
 
       <main className={`flex flex-1 flex-col gap-6 p-4 ${undoVisible ? "pb-32" : ""}`}>
         {expired ? (

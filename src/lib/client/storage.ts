@@ -41,6 +41,7 @@ export function useStoredValue(key: string): string | null | undefined {
 }
 
 export const hostKey = (code: string) => `pingque:host:${code}`;
+export const dismissedAnnouncementKey = (code: string) => `pingque:dismissed-announcement:${code}`;
 export const deviceKey = (code: string) => `pingque:device:${code}`;
 export const PROFILE_KEY = "pingque:profile";
 
