@@ -1,4 +1,4 @@
-# PingQue
+# TapCue
 
 Touch-based real-time signaling for teams. A host creates a room, participants join without signup (link, QR, or code), tap preset requests, and see their status (접수됨 → 확인됨 → 완료). Korean-first UI, dark by default.
 
@@ -49,7 +49,7 @@ Join codes are 8 characters (31-symbol alphabet without 0/O/1/I/L), shown as `AB
 
 All tunables live in `src/lib/config.ts`:
 
-- `ROOM_TTL_MINUTES = 30` – room lifetime (single constant)
+- `ROOM_TTL_MINUTES = 60` – room lifetime (single constant)
 - `MAX_PARTICIPANTS = 10`
 - `REQUEST_RATE_LIMIT_MS = 1000` – per device
 - `UNDO_WINDOW_MS = 5000`

@@ -1,5 +1,5 @@
 /** Free-tier room lifetime. Paid tiers will override this per room. */
-export const ROOM_TTL_MINUTES = 30;
+export const ROOM_TTL_MINUTES = 60;
 
 export const ROOM_TTL_MS = ROOM_TTL_MINUTES * 60 * 1000;
 

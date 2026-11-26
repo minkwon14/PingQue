@@ -1,6 +1,6 @@
 /**
  * Origin used for QR codes and join links. `PUBLIC_ORIGIN` (e.g.
- * https://pingque.example.com) overrides the host's address bar; unset or
+ * https://tapcue.example.com) overrides the host's address bar; unset or
  * invalid values fall back to it (undefined).
  */
 export function getPublicOrigin(env: Record<string, string | undefined>): string | undefined {
