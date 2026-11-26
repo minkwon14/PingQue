@@ -26,7 +26,6 @@ export function ParticipantProfile({
   const [nameValue, setNameValue] = useState(name);
   const [roleValue, setRoleValue] = useState(role);
   const [busy, setBusy] = useState(false);
-  const [confirmLeave, setConfirmLeave] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function startEdit() {
@@ -52,19 +51,6 @@ export function ParticipantProfile({
     } catch (err) {
       setError(actionErrorMessage(err, "저장하지 못했어요."));
     } finally {
-      setBusy(false);
-    }
-  }
-
-  async function leave() {
-    setBusy(true);
-    setError(null);
-    try {
-      await api.leaveRoom(code, token);
-      writeStored(deviceKey(code), null);
-    } catch (err) {
-      setConfirmLeave(false);
-      setError(actionErrorMessage(err, "나가지 못했어요."));
       setBusy(false);
     }
   }
@@ -108,10 +94,35 @@ export function ParticipantProfile({
         </div>
       )}
       {error ? <p className="text-red-400">{error}</p> : null}
+    </section>
+  );
+}
+
+export function LeaveRoomButton({ code, token }: { code: string; token: string }) {
+  const [confirmLeave, setConfirmLeave] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function leave() {
+    setBusy(true);
+    setError(null);
+    try {
+      await api.leaveRoom(code, token);
+      writeStored(deviceKey(code), null);
+    } catch (err) {
+      setConfirmLeave(false);
+      setError(actionErrorMessage(err, "나가지 못했어요."));
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      {error ? <p className="text-red-400">{error}</p> : null}
       <button
         type="button"
         onClick={() => setConfirmLeave(true)}
-        className="min-h-12 rounded-2xl bg-zinc-900 font-semibold text-red-300 active:bg-zinc-800"
+        className="min-h-12 rounded-2xl bg-zinc-900 px-6 font-semibold text-red-300 active:bg-zinc-800"
       >
         나가기
       </button>
@@ -126,6 +137,6 @@ export function ParticipantProfile({
           보낸 요청 중 처리되지 않은 요청은 자동으로 취소돼요.
         </ConfirmDialog>
       ) : null}
-    </section>
+    </>
   );
 }

@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { HostAnnouncePanel } from "@/components/Announcements";
 import { HostButtonsPanel } from "@/components/HostButtonsPanel";
 import { HostListPanel } from "@/components/HostListPanel";
+import { SettingsButton, SettingsSheet } from "@/components/SettingsSheet";
 import {
   ConfirmDialog,
   ConnectionBanner,
@@ -88,6 +89,7 @@ export function HostRoom({ code, publicOrigin }: { code: string; publicOrigin?: 
   const [busy, setBusy] = useState<Set<string>>(new Set());
   const [actionError, setActionError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
   const [closing, setClosing] = useState(false);
   const [closed, setClosed] = useState(false);
@@ -233,7 +235,7 @@ export function HostRoom({ code, publicOrigin }: { code: string; publicOrigin?: 
           </div>
           <div className="font-mono text-3xl font-black tracking-widest">{groupedCode(code)}</div>
         </div>
-        <div className="flex items-center gap-5 text-right">
+        <div className="flex items-center gap-3 text-right">
           <div>
             <div className="text-xl font-bold">
               {snapshot.participantCount}/{snapshot.room.maxParticipants}
@@ -251,10 +253,11 @@ export function HostRoom({ code, publicOrigin }: { code: string; publicOrigin?: 
           <button
             type="button"
             onClick={() => setInviteOpen(!showInvite)}
-            className="min-h-12 rounded-2xl bg-zinc-800 px-4 font-semibold"
+            className="min-h-12 shrink-0 whitespace-nowrap rounded-2xl bg-zinc-800 px-4 font-semibold"
           >
             {showInvite ? "초대 닫기" : "초대 / QR"}
           </button>
+          <SettingsButton onClick={() => setSettingsOpen(true)} />
         </div>
       </header>
 
@@ -296,38 +299,6 @@ export function HostRoom({ code, publicOrigin }: { code: string; publicOrigin?: 
           presets={snapshot.room.announcementPresets}
           announcements={snapshot.announcements}
           serverNow={serverNow}
-        />
-
-        <HostListPanel
-          title="공지 문구"
-          itemName="문구"
-          hint="저장하면 위 공지 버튼에 바로 적용되고, 다음 방을 만들 때도 불러와요."
-          emptyHint="자주 보내는 공지를 버튼으로 만들어 둘 수 있어요."
-          saved={snapshot.room.announcementPresets}
-          maxItems={MAX_ANNOUNCEMENT_PRESETS}
-          maxLength={ANNOUNCEMENT_MAX_LENGTH}
-          onSave={async (items) => {
-            const { presets } = await api.setAnnouncementPresets(code, token as string, items);
-            saveHostPresets(presets);
-            return presets;
-          }}
-        />
-
-        <HostButtonsPanel code={code} token={token as string} saved={snapshot.room.buttons} />
-
-        <HostListPanel
-          title="참가 역할 목록"
-          itemName="역할"
-          hint="참가자가 입장할 때 고를 수 있는 역할이에요. 직접 입력도 항상 가능하고, 같은 템플릿으로 다음 방을 만들 때도 불러와요."
-          emptyHint="목록이 비어 있으면 참가자가 역할을 직접 입력해요."
-          saved={snapshot.room.roles}
-          maxItems={MAX_ROLES}
-          maxLength={ROLE_MAX_LENGTH}
-          onSave={async (items) => {
-            const { roles } = await api.setRoles(code, token as string, items);
-            saveHostRoles(snapshot.room.templateId, roles);
-            return roles;
-          }}
         />
 
         {primary ? (
@@ -382,6 +353,41 @@ export function HostRoom({ code, publicOrigin }: { code: string; publicOrigin?: 
         </button>
         {wakeLock ? "화면 켜짐 유지 중" : "이 화면을 계속 켜 두세요 (자동 화면 켜짐 유지를 쓸 수 없어요)"}
       </footer>
+      {settingsOpen ? (
+        <SettingsSheet onClose={() => setSettingsOpen(false)}>
+          <HostListPanel
+            title="공지 문구"
+            itemName="문구"
+            hint="저장하면 위 공지 버튼에 바로 적용되고, 다음 방을 만들 때도 불러와요."
+            emptyHint="자주 보내는 공지를 버튼으로 만들어 둘 수 있어요."
+            saved={snapshot.room.announcementPresets}
+            maxItems={MAX_ANNOUNCEMENT_PRESETS}
+            maxLength={ANNOUNCEMENT_MAX_LENGTH}
+            onSave={async (items) => {
+              const { presets } = await api.setAnnouncementPresets(code, token as string, items);
+              saveHostPresets(presets);
+              return presets;
+            }}
+          />
+
+          <HostButtonsPanel code={code} token={token as string} saved={snapshot.room.buttons} />
+
+          <HostListPanel
+            title="참가 역할 목록"
+            itemName="역할"
+            hint="참가자가 입장할 때 고를 수 있는 역할이에요. 직접 입력도 항상 가능하고, 같은 템플릿으로 다음 방을 만들 때도 불러와요."
+            emptyHint="목록이 비어 있으면 참가자가 역할을 직접 입력해요."
+            saved={snapshot.room.roles}
+            maxItems={MAX_ROLES}
+            maxLength={ROLE_MAX_LENGTH}
+            onSave={async (items) => {
+              const { roles } = await api.setRoles(code, token as string, items);
+              saveHostRoles(snapshot.room.templateId, roles);
+              return roles;
+            }}
+          />
+        </SettingsSheet>
+      ) : null}
       {confirmClose ? (
         <ConfirmDialog
           title="방을 종료할까요?"
