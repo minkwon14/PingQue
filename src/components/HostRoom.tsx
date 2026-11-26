@@ -3,8 +3,15 @@
 import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { Notice, primaryButton, secondaryButton, StatusBadge } from "@/components/ui";
-import { api } from "@/lib/client/api";
+import {
+  ConnectionBanner,
+  ConnectionIndicator,
+  Notice,
+  primaryButton,
+  secondaryButton,
+  StatusBadge,
+} from "@/components/ui";
+import { actionErrorMessage, api } from "@/lib/client/api";
 import { formatCountdown, groupedCode, timeAgo } from "@/lib/client/format";
 import { hostKey, useStoredValue } from "@/lib/client/storage";
 import { useNow } from "@/lib/client/useNow";
@@ -59,7 +66,7 @@ function useWakeLock(): boolean {
 
 export function HostRoom({ code }: { code: string }) {
   const token = useStoredValue(hostKey(code));
-  const { snapshot, fatal, offline, clockOffset, newRequestTick, applyRequest } = useRoomSnapshot(
+  const { snapshot, fatal, connection, clockOffset, newRequestTick, applyRequest } = useRoomSnapshot(
     code,
     token,
   );
@@ -107,7 +114,15 @@ export function HostRoom({ code }: { code: string }) {
     );
   }
   if (!snapshot || snapshot.viewer.kind !== "receiver") {
-    return <Notice title="불러오는 중…" />;
+    return connection.status === "connected" ? (
+      <Notice title="불러오는 중…" />
+    ) : (
+      <Notice title="서버에 연결할 수 없어요">
+        {connection.status === "offline"
+          ? "인터넷 연결을 확인해 주세요. 연결되면 자동으로 다시 시도해요."
+          : `${connection.error ?? ""} 다시 시도하는 중…`}
+      </Notice>
+    );
   }
 
   const template = getTemplate(snapshot.room.templateId);
@@ -134,7 +149,7 @@ export function HostRoom({ code }: { code: string }) {
     try {
       applyRequest(await api.setStatus(code, token as string, request.id, status));
     } catch (error) {
-      setActionError(error instanceof Error ? error.message : "처리하지 못했어요.");
+      setActionError(actionErrorMessage(error, "처리하지 못했어요."));
     } finally {
       setBusy((prev) => {
         const next = new Set(prev);
@@ -176,7 +191,10 @@ export function HostRoom({ code }: { code: string }) {
 
       <header className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800 bg-background/95 px-4 py-3 backdrop-blur">
         <div>
-          <div className="text-sm text-zinc-500">{template?.name ?? "방"}</div>
+          <div className="flex items-center gap-3 text-sm text-zinc-500">
+            {template?.name ?? "방"}
+            <ConnectionIndicator status={connection.status} />
+          </div>
           <div className="font-mono text-3xl font-black tracking-widest">{groupedCode(code)}</div>
         </div>
         <div className="flex items-center gap-5 text-right">
@@ -184,7 +202,9 @@ export function HostRoom({ code }: { code: string }) {
             <div className="text-xl font-bold">
               {snapshot.participantCount}/{snapshot.room.maxParticipants}
             </div>
-            <div className="text-xs text-zinc-500">참여자</div>
+            <div className="text-xs text-zinc-500">
+              참여자 · 접속 {snapshot.connectedCount ?? 0}
+            </div>
           </div>
           <div>
             <div className={`font-mono text-xl font-bold ${remaining < 120_000 ? "text-amber-300" : ""}`}>
@@ -202,11 +222,7 @@ export function HostRoom({ code }: { code: string }) {
         </div>
       </header>
 
-      {offline ? (
-        <div className="bg-amber-500/20 px-4 py-2 text-center text-sm text-amber-200">
-          연결이 끊겼어요. 다시 연결하는 중…
-        </div>
-      ) : null}
+      <ConnectionBanner connection={connection} />
       {expired ? (
         <div className="bg-red-500/20 px-4 py-2 text-center text-red-200">방이 종료되었어요.</div>
       ) : null}
