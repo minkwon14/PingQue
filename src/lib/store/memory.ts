@@ -1,5 +1,6 @@
 import {
   ANNOUNCEMENT_HISTORY_SIZE,
+  ANNOUNCEMENT_PRESETS,
   ANNOUNCEMENT_RATE_LIMIT_MS,
   MAX_PARTICIPANTS,
   REQUEST_RATE_LIMIT_MS,
@@ -17,9 +18,11 @@ import {
   rateLimitRetryAfter,
   resolveSelections,
   resolveText,
+  validateAnnouncementPresets,
   validateAnnouncementText,
   validateButtons,
   validateParticipantInput,
+  validateRoles,
 } from "@/lib/domain/rules";
 import { getTemplate, type Template } from "@/lib/domain/templates";
 import type {
@@ -89,10 +92,20 @@ export class MemoryRoomStore implements RoomStore {
     this.rateLimitMs = options.rateLimitMs ?? REQUEST_RATE_LIMIT_MS;
   }
 
-  async createRoom(input: { templateId: string; buttons?: unknown }): Promise<CreateRoomResult> {
+  async createRoom(input: {
+    templateId: string;
+    buttons?: unknown;
+    announcementPresets?: unknown;
+    roles?: unknown;
+  }): Promise<CreateRoomResult> {
     const template = getTemplate(input.templateId);
     if (!template) throw new DomainError("invalid_input", "알 수 없는 템플릿이에요.");
     const buttons = input.buttons === undefined ? [] : validateButtons(input.buttons);
+    const announcementPresets =
+      input.announcementPresets === undefined
+        ? [...ANNOUNCEMENT_PRESETS]
+        : validateAnnouncementPresets(input.announcementPresets);
+    const roles = input.roles === undefined ? [...template.roles] : validateRoles(input.roles);
     this.purgeOldRooms();
 
     let code = generateJoinCode(randomInt);
@@ -105,6 +118,8 @@ export class MemoryRoomStore implements RoomStore {
       templateId: template.id,
       maxParticipants: this.maxParticipants,
       buttons,
+      announcementPresets,
+      roles,
       createdAt: now,
       expiresAt: now + this.roomTtlMs,
     };
@@ -134,6 +149,7 @@ export class MemoryRoomStore implements RoomStore {
       code: room.code,
       templateId: room.templateId,
       expiresAt: room.expiresAt,
+      roles: [...room.roles],
       participantCount: participants.length,
       maxParticipants: room.maxParticipants,
     };
@@ -144,7 +160,7 @@ export class MemoryRoomStore implements RoomStore {
     input: { name: unknown; role: unknown; token?: string },
   ): Promise<JoinRoomResult> {
     const state = this.requireActiveRoom(code);
-    const { name, role } = validateParticipantInput(state.template, input);
+    const { name, role } = validateParticipantInput(input);
 
     const existing = input.token
       ? state.participants.find((p) => p.tokenHash === hashToken(input.token as string))
@@ -274,6 +290,26 @@ export class MemoryRoomStore implements RoomStore {
     return state.room.buttons.map((b) => ({ ...b }));
   }
 
+  async setAnnouncementPresets(code: string, token: string, presets: unknown): Promise<string[]> {
+    const state = this.requireActiveRoom(code);
+    if (this.authenticate(state, token).kind !== "receiver") {
+      throw new DomainError("forbidden", "호스트만 공지 문구를 바꿀 수 있어요.");
+    }
+    state.room = { ...state.room, announcementPresets: validateAnnouncementPresets(presets) };
+    this.notify(state.room.code);
+    return [...state.room.announcementPresets];
+  }
+
+  async setRoles(code: string, token: string, roles: unknown): Promise<string[]> {
+    const state = this.requireActiveRoom(code);
+    if (this.authenticate(state, token).kind !== "receiver") {
+      throw new DomainError("forbidden", "호스트만 역할 목록을 바꿀 수 있어요.");
+    }
+    state.room = { ...state.room, roles: validateRoles(roles) };
+    this.notify(state.room.code);
+    return [...state.room.roles];
+  }
+
   async announce(code: string, token: string, text: unknown): Promise<Announcement> {
     const state = this.requireActiveRoom(code);
     if (this.authenticate(state, token).kind !== "receiver") {
@@ -333,7 +369,7 @@ export class MemoryRoomStore implements RoomStore {
     if (actor.kind !== "participant") {
       throw new DomainError("forbidden", "참가자만 내 정보를 바꿀 수 있어요.");
     }
-    const { name, role } = validateParticipantInput(state.template, input);
+    const { name, role } = validateParticipantInput(input);
     actor.participant.name = name;
     actor.participant.role = role;
     this.notify(state.room.code);

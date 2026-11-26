@@ -5,8 +5,10 @@ import { primaryButton } from "@/components/ui";
 import { actionErrorMessage, api } from "@/lib/client/api";
 import { timeAgo } from "@/lib/client/format";
 import { dismissedAnnouncementKey, useStoredValue, writeStored } from "@/lib/client/storage";
-import { ANNOUNCEMENT_MAX_LENGTH, ANNOUNCEMENT_PRESETS } from "@/lib/config";
+import { ANNOUNCEMENT_MAX_LENGTH } from "@/lib/config";
 import type { Announcement } from "@/lib/domain/types";
+
+const HOST_HISTORY_VISIBLE = 5;
 
 /** Participant view: the active announcement, highlighted, until this device dismisses it. */
 export function AnnouncementBanner({
@@ -45,15 +47,54 @@ export function AnnouncementBanner({
   );
 }
 
-/** Host view: free text or preset phrases, plus the recent announcement history. */
+/** Participant view: every announcement kept for the room, newest first. Independent of banner dismissal. */
+export function AnnouncementHistory({
+  announcements,
+  serverNow,
+}: {
+  announcements: Announcement[];
+  serverNow: number;
+}) {
+  const [open, setOpen] = useState(false);
+  if (announcements.length === 0) return null;
+  return (
+    <section className="flex flex-col gap-2">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+        className="flex min-h-12 items-center justify-between gap-3 rounded-2xl bg-zinc-900 px-4 font-semibold text-zinc-200 active:bg-zinc-800"
+      >
+        <span>받은 공지 {announcements.length}개</span>
+        <span aria-hidden className="text-zinc-500">
+          {open ? "접기 ▲" : "보기 ▼"}
+        </span>
+      </button>
+      {open ? (
+        <ul className="flex flex-col gap-2 rounded-2xl bg-zinc-900 p-4">
+          {announcements.map((a) => (
+            <li key={a.id} className="flex items-start justify-between gap-3">
+              <span className="min-w-0 break-words text-lg font-semibold">{a.text}</span>
+              <span className="shrink-0 pt-1 text-sm text-zinc-500">{timeAgo(serverNow - a.createdAt)}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </section>
+  );
+}
+
+/** Host view: free text or the room's preset phrases, plus the recent announcement history. */
 export function HostAnnouncePanel({
   code,
   token,
+  presets,
   announcements,
   serverNow,
 }: {
   code: string;
   token: string;
+  presets: string[];
   announcements: Announcement[];
   serverNow: number;
 }) {
@@ -79,7 +120,7 @@ export function HostAnnouncePanel({
     <section className="flex flex-col gap-3 rounded-3xl bg-zinc-900 p-4">
       <h2 className="font-bold">모두에게 공지</h2>
       <div className="flex flex-wrap gap-2">
-        {ANNOUNCEMENT_PRESETS.map((preset) => (
+        {presets.map((preset) => (
           <button
             key={preset}
             type="button"
@@ -113,7 +154,7 @@ export function HostAnnouncePanel({
       {error ? <p className="text-red-400">{error}</p> : null}
       {announcements.length > 0 ? (
         <ul className="flex flex-col gap-1 text-sm text-zinc-400">
-          {announcements.map((a, i) => (
+          {announcements.slice(0, HOST_HISTORY_VISIBLE).map((a, i) => (
             <li key={a.id} className="flex justify-between gap-3">
               <span className={`min-w-0 truncate ${i === 0 ? "font-bold text-zinc-200" : ""}`}>{a.text}</span>
               <span className="shrink-0 text-zinc-500">{timeAgo(serverNow - a.createdAt)}</span>

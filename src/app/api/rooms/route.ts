@@ -11,6 +11,8 @@ export async function POST(request: Request) {
     const { room, hostToken } = await getStore().createRoom({
       templateId: body.templateId,
       buttons: body.buttons,
+      announcementPresets: body.announcementPresets,
+      roles: body.roles,
     });
     return Response.json({ room, hostToken }, { status: 201 });
   } catch (error) {

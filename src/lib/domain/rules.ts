@@ -2,8 +2,11 @@ import {
   ANNOUNCEMENT_MAX_LENGTH,
   CUSTOM_BUTTON_LABEL_MAX_LENGTH,
   JOIN_CODE_LENGTH,
+  MAX_ANNOUNCEMENT_PRESETS,
   MAX_CUSTOM_BUTTONS,
+  MAX_ROLES,
   NAME_MAX_LENGTH,
+  ROLE_MAX_LENGTH,
 } from "@/lib/config";
 import { DomainError } from "./errors";
 import type { Template } from "./templates";
@@ -35,8 +38,15 @@ export function isUuid(value: unknown): value is string {
   return typeof value === "string" && UUID_RE.test(value);
 }
 
+export function validateRole(role: unknown): string {
+  const value = typeof role === "string" ? role.trim() : "";
+  if (value.length < 1 || value.length > ROLE_MAX_LENGTH) {
+    throw new DomainError("invalid_input", `역할은 1~${ROLE_MAX_LENGTH}자로 입력해 주세요.`);
+  }
+  return value;
+}
+
 export function validateParticipantInput(
-  template: Template,
   input: { name: unknown; role: unknown },
 ): { name: string; role: string } {
   const name = typeof input.name === "string" ? input.name.trim() : "";
@@ -46,11 +56,7 @@ export function validateParticipantInput(
       `이름은 1~${NAME_MAX_LENGTH}자로 입력해 주세요.`,
     );
   }
-  const role = typeof input.role === "string" ? input.role : "";
-  if (!template.roles.includes(role)) {
-    throw new DomainError("invalid_input", "올바른 역할을 선택해 주세요.");
-  }
-  return { name, role };
+  return { name, role: validateRole(input.role) };
 }
 
 export interface ResolvedSelections {
@@ -126,6 +132,37 @@ export function validateButtons(input: unknown): RoomButton[] {
     seen.add(id);
     return { id, label: resolveText(label).label };
   });
+}
+
+function validateTextList(
+  input: unknown,
+  max: number,
+  validateItem: (item: unknown) => string,
+  tooManyMessage: string,
+): string[] {
+  if (!Array.isArray(input) || input.length > max) {
+    throw new DomainError("invalid_input", tooManyMessage);
+  }
+  return [...new Set(input.map(validateItem))];
+}
+
+/** Trimmed, validated and de-duplicated (order kept); an empty list is allowed. */
+export function validateAnnouncementPresets(input: unknown): string[] {
+  return validateTextList(
+    input,
+    MAX_ANNOUNCEMENT_PRESETS,
+    validateAnnouncementText,
+    `자주 쓰는 공지는 최대 ${MAX_ANNOUNCEMENT_PRESETS}개까지 만들 수 있어요.`,
+  );
+}
+
+export function validateRoles(input: unknown): string[] {
+  return validateTextList(
+    input,
+    MAX_ROLES,
+    validateRole,
+    `역할은 최대 ${MAX_ROLES}개까지 만들 수 있어요.`,
+  );
 }
 
 const TRANSITIONS: Record<ActorKind, Partial<Record<RequestStatus, RequestStatus[]>>> = {

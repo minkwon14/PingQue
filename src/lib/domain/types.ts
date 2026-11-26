@@ -21,6 +21,10 @@ export interface Room {
   templateId: string;
   maxParticipants: number;
   buttons: RoomButton[];
+  /** Host-managed one-tap announcement phrases. */
+  announcementPresets: string[];
+  /** Host-managed role choices offered when joining (custom text is also accepted). */
+  roles: string[];
   createdAt: number;
   expiresAt: number;
 }
@@ -66,6 +70,7 @@ export interface PublicRoom {
   code: string;
   templateId: string;
   expiresAt: number;
+  roles: string[];
   participantCount: number;
   maxParticipants: number;
 }

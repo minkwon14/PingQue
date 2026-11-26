@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AnnouncementBanner } from "@/components/Announcements";
+import { AnnouncementBanner, AnnouncementHistory } from "@/components/Announcements";
 import { ParticipantProfile } from "@/components/ParticipantProfile";
 import { QuickButtons } from "@/components/QuickButtons";
 import { ConnectionBanner, ConnectionIndicator, Notice, StatusBadge } from "@/components/ui";
@@ -195,6 +195,8 @@ export function ParticipantRoom({ code }: { code: string }) {
       <AnnouncementBanner code={code} announcement={snapshot.announcements[0]} />
 
       <main className={`flex flex-1 flex-col gap-6 p-4 ${undoVisible ? "pb-32" : ""}`}>
+        <AnnouncementHistory announcements={snapshot.announcements} serverNow={serverNow} />
+
         {expired ? (
           <p className="rounded-2xl bg-zinc-800 p-6 text-center text-lg">방이 종료되었어요.</p>
         ) : (
@@ -303,7 +305,7 @@ export function ParticipantRoom({ code }: { code: string }) {
           token={token}
           name={me.name}
           role={me.role}
-          roles={template.roles}
+          roles={snapshot.room.roles}
           onChanged={() => void refresh()}
         />
       </main>

@@ -33,7 +33,13 @@ export interface CreateRequestResult {
  * (expired room, full room, rate limit, bad transition, ...).
  */
 export interface RoomStore {
-  createRoom(input: { templateId: string; buttons?: unknown }): Promise<CreateRoomResult>;
+  /** Omitted presets / roles fall back to the defaults (`ANNOUNCEMENT_PRESETS`, the template's roles). */
+  createRoom(input: {
+    templateId: string;
+    buttons?: unknown;
+    announcementPresets?: unknown;
+    roles?: unknown;
+  }): Promise<CreateRoomResult>;
   getPublicRoom(code: string): Promise<PublicRoom>;
   /** Passing an existing device token re-attaches to the same participant. */
   joinRoom(
@@ -49,6 +55,10 @@ export interface RoomStore {
   ): Promise<CreateRequestResult>;
   /** Host only. Replaces the room's shared quick buttons. */
   setButtons(code: string, token: string, buttons: unknown): Promise<RoomButton[]>;
+  /** Host only. Replaces the room's announcement preset phrases. */
+  setAnnouncementPresets(code: string, token: string, presets: unknown): Promise<string[]>;
+  /** Host only. Replaces the role choices offered when joining. */
+  setRoles(code: string, token: string, roles: unknown): Promise<string[]>;
   /** Host only. Makes `text` the active announcement and keeps a short history. */
   announce(code: string, token: string, text: unknown): Promise<Announcement>;
   /** Host only. Closes the room for everyone; later joins and fetches fail with `room_closed`. */

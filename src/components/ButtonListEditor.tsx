@@ -12,12 +12,19 @@ const iconButton =
 export function ButtonListEditor({
   buttons,
   onChange,
+  maxItems = MAX_CUSTOM_BUTTONS,
+  maxLength = CUSTOM_BUTTON_LABEL_MAX_LENGTH,
+  itemName = "버튼",
 }: {
   buttons: RoomButton[];
   onChange: (buttons: RoomButton[]) => void;
+  maxItems?: number;
+  maxLength?: number;
+  /** Noun used in labels and placeholders, e.g. "버튼", "문구", "역할". */
+  itemName?: string;
 }) {
   const [draft, setDraft] = useState("");
-  const full = buttons.length >= MAX_CUSTOM_BUTTONS;
+  const full = buttons.length >= maxItems;
   const newLabel = draft.trim();
 
   function move(index: number, delta: number) {
@@ -39,8 +46,8 @@ export function ButtonListEditor({
           <li key={button.id} className="flex items-center gap-2">
             <input
               value={button.label}
-              maxLength={CUSTOM_BUTTON_LABEL_MAX_LENGTH}
-              aria-label={`버튼 ${i + 1} 이름`}
+              maxLength={maxLength}
+              aria-label={`${itemName} ${i + 1} 이름`}
               onChange={(e) =>
                 onChange(buttons.map((b) => (b.id === button.id ? { ...b, label: e.target.value } : b)))
               }
@@ -79,9 +86,9 @@ export function ButtonListEditor({
         <input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          maxLength={CUSTOM_BUTTON_LABEL_MAX_LENGTH}
+          maxLength={maxLength}
           disabled={full}
-          placeholder={full ? `최대 ${MAX_CUSTOM_BUTTONS}개까지 만들 수 있어요` : "새 버튼 이름"}
+          placeholder={full ? `최대 ${maxItems}개까지 만들 수 있어요` : `새 ${itemName} 이름`}
           className="min-h-11 min-w-0 flex-1 rounded-xl border-2 border-zinc-800 bg-zinc-900 px-3 text-lg placeholder:text-base"
         />
         <button
