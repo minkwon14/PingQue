@@ -15,3 +15,6 @@ export const UNDO_WINDOW_MS = 5000;
 export const JOIN_CODE_LENGTH = 6;
 
 export const NAME_MAX_LENGTH = 20;
+
+/** A participant counts as connected if its device fetched room state within this window (poll is 5s). */
+export const PRESENCE_TTL_MS = 15_000;

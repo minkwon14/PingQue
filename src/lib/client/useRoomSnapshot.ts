@@ -1,17 +1,34 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { PingRequest, RoomSnapshot } from "@/lib/domain/types";
 import { ApiError, api } from "./api";
 
 const POLL_MS = 5000;
 
+export type ConnectionStatus = "connected" | "reconnecting" | "offline";
+
+export interface ConnectionState {
+  status: ConnectionStatus;
+  /** Korean message for the last failed refresh, if any. */
+  error: string | null;
+}
+
+function subscribeOnline(onChange: () => void) {
+  window.addEventListener("online", onChange);
+  window.addEventListener("offline", onChange);
+  return () => {
+    window.removeEventListener("online", onChange);
+    window.removeEventListener("offline", onChange);
+  };
+}
+
 export interface RoomSnapshotState {
   snapshot: RoomSnapshot | null;
   /** Fatal error (expired, unauthorized, not found) that stops syncing. */
   fatal: ApiError | null;
-  /** True while the last refresh failed transiently (e.g. Wi-Fi drop). */
-  offline: boolean;
+  /** offline: browser has no network; reconnecting: network is up but the last refresh failed. */
+  connection: ConnectionState;
   /** Offset to add to Date.now() to approximate server time. */
   clockOffset: number;
   /** Increments when a request from another sender shows up after the first load. */
@@ -28,7 +45,12 @@ export interface RoomSnapshotState {
 export function useRoomSnapshot(code: string, token: string | null | undefined): RoomSnapshotState {
   const [snapshot, setSnapshot] = useState<RoomSnapshot | null>(null);
   const [fatal, setFatal] = useState<ApiError | null>(null);
-  const [offline, setOffline] = useState(false);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
+  const browserOnline = useSyncExternalStore(
+    subscribeOnline,
+    () => navigator.onLine,
+    () => true,
+  );
   const [clockOffset, setClockOffset] = useState(0);
   const [newRequestTick, setNewRequestTick] = useState(0);
 
@@ -62,7 +84,7 @@ export function useRoomSnapshot(code: string, token: string | null | undefined):
             }
           }
           setSnapshot(next);
-          setOffline(false);
+          setRefreshError(null);
           setFatal(null);
         } catch (error) {
           if (stopped.current) return;
@@ -71,7 +93,9 @@ export function useRoomSnapshot(code: string, token: string | null | undefined):
             setFatal(error);
             return;
           }
-          setOffline(true);
+          setRefreshError(
+            error instanceof Error ? error.message : "서버와 통신하지 못했어요.",
+          );
         }
       } while (dirty.current);
     } finally {
@@ -122,5 +146,10 @@ export function useRoomSnapshot(code: string, token: string | null | undefined):
     };
   }, [code, token, refresh]);
 
-  return { snapshot, fatal, offline, clockOffset, newRequestTick, refresh, applyRequest };
+  const connection: ConnectionState = {
+    status: !browserOnline ? "offline" : refreshError !== null ? "reconnecting" : "connected",
+    error: refreshError,
+  };
+
+  return { snapshot, fatal, connection, clockOffset, newRequestTick, refresh, applyRequest };
 }

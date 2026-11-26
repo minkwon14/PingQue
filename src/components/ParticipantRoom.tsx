@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Notice, StatusBadge } from "@/components/ui";
-import { ApiError, api } from "@/lib/client/api";
+import { ConnectionBanner, ConnectionIndicator, Notice, StatusBadge } from "@/components/ui";
+import { actionErrorMessage, ApiError, api } from "@/lib/client/api";
 import { formatCountdown, timeAgo } from "@/lib/client/format";
 import { newRequestId } from "@/lib/client/id";
 import { deviceKey, parseDevice, useStoredValue, writeStored } from "@/lib/client/storage";
@@ -22,7 +22,7 @@ export function ParticipantRoom({ code }: { code: string }) {
   const router = useRouter();
   const raw = useStoredValue(deviceKey(code));
   const device = useMemo(() => parseDevice(raw), [raw]);
-  const { snapshot, fatal, offline, clockOffset, applyRequest } = useRoomSnapshot(
+  const { snapshot, fatal, connection, clockOffset, applyRequest } = useRoomSnapshot(
     code,
     device?.token,
   );
@@ -62,7 +62,16 @@ export function ParticipantRoom({ code }: { code: string }) {
     );
   }
   if (!device || !snapshot || snapshot.viewer.kind !== "participant") {
-    return <Notice title={fatal ? "다시 연결하는 중…" : "불러오는 중…"} />;
+    if (connection.status === "connected") {
+      return <Notice title={fatal ? "다시 연결하는 중…" : "불러오는 중…"} />;
+    }
+    return (
+      <Notice title="서버에 연결할 수 없어요">
+        {connection.status === "offline"
+          ? "인터넷 연결을 확인해 주세요. 연결되면 자동으로 다시 시도해요."
+          : `${connection.error ?? ""} 다시 시도하는 중…`}
+      </Notice>
+    );
   }
 
   const template = getTemplate(snapshot.room.templateId);
@@ -117,7 +126,7 @@ export function ParticipantRoom({ code }: { code: string }) {
         setSendError("너무 빨라요. 잠깐 뒤에 다시 눌러 주세요.");
         setLockedUntil(currentTime() + (error.retryAfterMs ?? REQUEST_RATE_LIMIT_MS));
       } else {
-        setSendError(error instanceof Error ? error.message : "보내지 못했어요.");
+        setSendError(actionErrorMessage(error, "보내지 못했어요."));
       }
     } finally {
       setSending(false);
@@ -129,7 +138,7 @@ export function ParticipantRoom({ code }: { code: string }) {
       applyRequest(await api.setStatus(code, token, id, "cancelled"));
       setUndo((u) => (u?.id === id ? null : u));
     } catch (error) {
-      setSendError(error instanceof Error ? error.message : "취소하지 못했어요.");
+      setSendError(actionErrorMessage(error, "취소하지 못했어요."));
     }
   }
 
@@ -144,7 +153,13 @@ export function ParticipantRoom({ code }: { code: string }) {
           <div className="truncate text-lg font-bold">
             {me.name} <span className="font-normal text-zinc-400">· {me.role}</span>
           </div>
-          <div className="text-sm text-zinc-500">방 {code}</div>
+          <div className="flex items-center gap-3 text-sm text-zinc-500">
+            방 {code}
+            <ConnectionIndicator status={connection.status} />
+          </div>
+          {snapshot.connectedCount !== undefined && connection.status === "connected" ? (
+            <div className="text-xs text-zinc-500">접속 중 {snapshot.connectedCount}명</div>
+          ) : null}
         </div>
         <div className="text-right">
           <div className={`font-mono text-xl font-bold ${remaining < 120_000 ? "text-amber-300" : ""}`}>
@@ -154,11 +169,7 @@ export function ParticipantRoom({ code }: { code: string }) {
         </div>
       </header>
 
-      {offline ? (
-        <div className="bg-amber-500/20 px-4 py-2 text-center text-sm text-amber-200">
-          연결이 끊겼어요. 다시 연결하는 중…
-        </div>
-      ) : null}
+      <ConnectionBanner connection={connection} />
 
       <main className={`flex flex-1 flex-col gap-6 p-4 ${undoVisible ? "pb-32" : ""}`}>
         {expired ? (

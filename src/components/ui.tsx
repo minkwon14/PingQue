@@ -1,3 +1,4 @@
+import type { ConnectionState, ConnectionStatus } from "@/lib/client/useRoomSnapshot";
 import type { RequestStatus } from "@/lib/domain/types";
 
 export const STATUS_LABEL: Record<RequestStatus, string> = {
@@ -19,6 +20,44 @@ export function StatusBadge({ status }: { status: RequestStatus }) {
     <span className={`rounded-full px-3 py-1 text-sm font-semibold ${STATUS_STYLE[status]}`}>
       {STATUS_LABEL[status]}
     </span>
+  );
+}
+
+const CONNECTION_LABEL: Record<ConnectionStatus, string> = {
+  connected: "연결됨",
+  reconnecting: "재연결 중",
+  offline: "오프라인",
+};
+
+const CONNECTION_DOT: Record<ConnectionStatus, string> = {
+  connected: "bg-emerald-400",
+  reconnecting: "bg-amber-400 animate-pulse",
+  offline: "bg-red-500",
+};
+
+export function ConnectionIndicator({ status }: { status: ConnectionStatus }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 text-xs text-zinc-400">
+      <span aria-hidden className={`h-2.5 w-2.5 rounded-full ${CONNECTION_DOT[status]}`} />
+      {CONNECTION_LABEL[status]}
+    </span>
+  );
+}
+
+export function ConnectionBanner({ connection }: { connection: ConnectionState }) {
+  if (connection.status === "connected") return null;
+  const offline = connection.status === "offline";
+  return (
+    <div
+      role="alert"
+      className={`px-4 py-2 text-center text-sm ${
+        offline ? "bg-red-500/20 text-red-200" : "bg-amber-500/20 text-amber-200"
+      }`}
+    >
+      {offline
+        ? "인터넷 연결이 끊겼어요. 연결되면 자동으로 다시 시작해요."
+        : `${connection.error ?? "서버와 연결이 끊겼어요."} 다시 연결하는 중…`}
+    </div>
   );
 }
 

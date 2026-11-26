@@ -66,6 +66,8 @@ export interface RoomSnapshot {
   /** Receivers see everyone; participants see only themselves. */
   participants: Participant[];
   participantCount: number;
+  /** Participants whose device fetched state recently. Filled in by the state route. */
+  connectedCount?: number;
   /** Receivers see all requests; participants see only their own. */
   requests: PingRequest[];
   serverNow: number;

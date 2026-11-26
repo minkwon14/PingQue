@@ -25,6 +25,14 @@ export class ApiError extends Error {
   }
 }
 
+/** Short Korean message for a failed user action (send, cancel, confirm, ...). */
+export function actionErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof ApiError && error.code === "network") {
+    return "네트워크 연결을 확인하고 다시 시도해 주세요.";
+  }
+  return error instanceof Error ? error.message : fallback;
+}
+
 async function call<T>(
   path: string,
   options: { method?: string; token?: string | null; body?: unknown } = {},
