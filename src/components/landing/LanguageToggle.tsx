@@ -18,7 +18,11 @@ export function LanguageToggle({ lang }: { lang: Lang }) {
   }
 
   return (
-    <div role="group" aria-label="Language" className="flex rounded-full bg-zinc-800 p-0.5 text-sm font-semibold">
+    <div
+      role="group"
+      aria-label="Language"
+      className="flex rounded-full border border-(--tc-line) p-0.5 text-sm font-semibold"
+    >
       {OPTIONS.map((option) => (
         <button
           key={option.lang}
@@ -27,8 +31,10 @@ export function LanguageToggle({ lang }: { lang: Lang }) {
           aria-label={option.name}
           aria-pressed={lang === option.lang}
           onClick={() => choose(option.lang)}
-          className={`min-h-9 min-w-10 rounded-full px-3 ${
-            lang === option.lang ? "bg-zinc-100 text-zinc-900" : "text-zinc-300 hover:text-white"
+          className={`min-h-9 min-w-10 rounded-full px-3 transition-colors ${
+            lang === option.lang
+              ? "bg-(--tc-chalk) text-[#0c1a20]"
+              : "text-(--tc-muted) hover:text-(--tc-chalk)"
           }`}
         >
           {option.label}
