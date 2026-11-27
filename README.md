@@ -35,7 +35,7 @@ Set `PUBLIC_ORIGIN` (server-side, see `.env.example`) to the public `https://` a
 
 Join codes are 8 characters (31-symbol alphabet without 0/O/1/I/L), shown as `ABCD EFGH`; spaces and dashes are ignored and case does not matter. Links and codes from rooms created with the older 6-character format still open the matching room while it lives. Room lookups and join attempts are limited per client IP (`JOIN_ATTEMPT_LIMIT` per `JOIN_ATTEMPT_WINDOW_MS`, in-memory); beyond that the API returns HTTP 429 with a Korean message. The IP comes from `cf-connecting-ip` / `x-forwarded-for`, so it is only reliable behind Cloudflare or Render. Devices sharing one public IP (one venue Wi-Fi) share the limit, which is sized for a full room.
 
-`/` is a bilingual (Korean/English) landing page; the create-room / join-by-code screen lives at `/start`. The landing language comes from the `tapcue-lang` cookie (set by the 한/EN toggle) or else the browser's `Accept-Language`; its copy is in `src/lib/landing/content.ts`, and the phone screenshots are in `public/landing/`.
+`/` is a bilingual (Korean/English) landing page; the create-room / join-by-code screen lives at `/start`. The landing language comes from the `tapcue-lang` cookie (set by the 한/EN toggle) or else the browser's `Accept-Language`; its copy is in `src/lib/landing/content.ts`, and the demo screenshots (`host-` / `participant-` x `ko` / `en`) are in `public/landing/`.
 
 ## Scripts
 

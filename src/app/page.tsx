@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
 import Link from "next/link";
 import { LandingHeader } from "@/components/landing/LandingHeader";
-import { PhoneFrame } from "@/components/landing/PhoneFrame";
+import { PhoneFrame, TabletFrame } from "@/components/landing/DeviceFrames";
 import { LANDING_CONTENT } from "@/lib/landing/content";
 import { LANG_COOKIE, resolveLang } from "@/lib/landing/lang";
 
@@ -63,16 +63,22 @@ export default async function LandingPage() {
             </div>
             <p className="text-sm text-zinc-500">{t.hero.note}</p>
           </div>
-          <div className="flex items-start justify-center gap-4 sm:gap-8">
-            <PhoneFrame src="/landing/host.webp" alt={t.hero.hostAlt} caption={t.hero.hostCaption} priority />
-            <PhoneFrame
-              src="/landing/participant.webp"
-              alt={t.hero.participantAlt}
-              caption={t.hero.participantCaption}
-              priority
-              className="mt-8 sm:mt-12"
-            />
-          </div>
+          <figure className="mx-auto flex w-full max-w-[720px] flex-col gap-4">
+            <div className="relative pb-12 sm:pb-20">
+              <div className="w-[90%]">
+                <TabletFrame src={`/landing/host-${lang}.webp`} alt={t.hero.hostAlt} priority />
+              </div>
+              <PhoneFrame
+                src={`/landing/participant-${lang}.webp`}
+                alt={t.hero.participantAlt}
+                priority
+                className="absolute bottom-0 right-0 w-[32%] sm:w-[28%]"
+              />
+            </div>
+            <figcaption className="text-center text-sm text-zinc-400">
+              {t.hero.hostCaption} · {t.hero.participantCaption}
+            </figcaption>
+          </figure>
         </section>
 
         <section className="border-y border-zinc-800/80 bg-zinc-900/40">
