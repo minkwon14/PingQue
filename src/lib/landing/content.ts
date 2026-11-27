@@ -15,6 +15,7 @@ export interface LandingContent {
     note: string;
     hostCaption: string;
     participantCaption: string;
+    lamps: [string, string, string];
     hostAlt: string;
     participantAlt: string;
   };
@@ -38,15 +39,16 @@ const ko: LandingContent = {
   },
   nav: { features: "기능", how: "사용 방법", start: "시작하기", menu: "메뉴" },
   hero: {
-    badge: "라이브 · 촬영 · 예배 현장용",
+    badge: "라이브, 촬영, 예배 현장용",
     title: "현장에서 말 없이, 탭 한 번으로 요청하고 확인받으세요",
     subtitle:
       "무대, 음향, 조명, 영상 팀이 서로 방해하지 않고 요청을 주고받아요. 가입 없이 QR로 참가하고, 호스트가 확인하면 바로 알려드려요.",
     create: "방 만들기",
     join: "코드로 참가",
-    note: "가입 없음 · 무료 · 방은 1시간 뒤 자동 종료",
+    note: "가입 없이 무료로 쓰고, 방은 1시간 뒤 자동으로 닫혀요.",
     hostCaption: "호스트 화면(태블릿)",
     participantCaption: "참가자 화면(휴대폰)",
+    lamps: ["접수", "확인", "완료"],
     hostAlt: "TapCue 호스트 화면: 공지 보내기와 대기 중인 요청",
     participantAlt: "TapCue 참가자 화면: 요청 버튼과 내 요청 상태",
   },
@@ -133,9 +135,10 @@ const en: LandingContent = {
       "Stage, sound, lighting and video crews pass requests along without disturbing anyone. Join by QR with no sign-up, and the host confirms each request right away.",
     create: "Create a room",
     join: "Join with a code",
-    note: "No sign-up · Free · Rooms close automatically after 1 hour",
+    note: "Free, with no sign-up. Rooms close on their own after 1 hour.",
     hostCaption: "Host screen (tablet)",
     participantCaption: "Participant screen (phone)",
+    lamps: ["Received", "Confirmed", "Done"],
     hostAlt: "TapCue host screen: announcements and a waiting request",
     participantAlt: "TapCue participant screen: request buttons and my request status",
   },
