@@ -101,7 +101,7 @@ export function HostRoom({ code, publicOrigin }: { code: string; publicOrigin?: 
   }, [snapshot]);
 
   const home = (
-    <Link href="/" className="text-indigo-300 underline">
+    <Link href="/start" className="text-indigo-300 underline">
       처음으로
     </Link>
   );

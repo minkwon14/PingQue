@@ -70,7 +70,7 @@ export function ParticipantRoom({ code }: { code: string }) {
       <Notice
         title="방이 종료되었어요"
         action={
-          <Link href="/" className="text-indigo-300 underline">
+          <Link href="/start" className="text-indigo-300 underline">
             처음으로
           </Link>
         }
