@@ -16,8 +16,8 @@ npm run dev:lan        # next dev -H 0.0.0.0
 1. Put all devices on the same Wi-Fi.
 2. Start the server with `npm run dev:lan` (listens on all interfaces, port 3000).
 3. Find the Mac's LAN IP, e.g. `ipconfig getifaddr en0` → `192.168.0.5`.
-4. **On the Mac, open `http://192.168.0.5:3000`** (not `localhost`) and create a room. The join link and QR code are built from the address in the browser bar, so with `localhost` they would not work on phones.
-5. Scan the QR code with the iPhone/iPad (or type the 8-character code on the home page).
+4. **On the Mac, open `http://192.168.0.5:3000/start`** (not `localhost`) and create a room. The join link and QR code are built from the address in the browser bar, so with `localhost` they would not work on phones.
+5. Scan the QR code with the iPhone/iPad (or type the 8-character code on the `/start` page).
 
 Notes for plain-http LAN testing:
 
@@ -34,6 +34,8 @@ Set `PUBLIC_ORIGIN` (server-side, see `.env.example`) to the public `https://` a
 - **Render:** in the web service's Environment tab add `PUBLIC_ORIGIN` = `https://<service>.onrender.com` (or your custom domain), build with `npm install && npm run build`, start with `npm start`. Render sets `PORT`; the in-memory store is lost on restart or free-tier spin-down.
 
 Join codes are 8 characters (31-symbol alphabet without 0/O/1/I/L), shown as `ABCD EFGH`; spaces and dashes are ignored and case does not matter. Links and codes from rooms created with the older 6-character format still open the matching room while it lives. Room lookups and join attempts are limited per client IP (`JOIN_ATTEMPT_LIMIT` per `JOIN_ATTEMPT_WINDOW_MS`, in-memory); beyond that the API returns HTTP 429 with a Korean message. The IP comes from `cf-connecting-ip` / `x-forwarded-for`, so it is only reliable behind Cloudflare or Render. Devices sharing one public IP (one venue Wi-Fi) share the limit, which is sized for a full room.
+
+`/` is a bilingual (Korean/English) landing page; the create-room / join-by-code screen lives at `/start`. The landing language comes from the `tapcue-lang` cookie (set by the 한/EN toggle) or else the browser's `Accept-Language`; its copy is in `src/lib/landing/content.ts`, and the phone screenshots are in `public/landing/`.
 
 ## Scripts
 

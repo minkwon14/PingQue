@@ -82,7 +82,7 @@ export function JoinForm({ code }: { code: string }) {
       <Notice
         title={title}
         action={
-          <Link href="/" className="text-indigo-300 underline">
+          <Link href="/start" className="text-indigo-300 underline">
             처음으로
           </Link>
         }
