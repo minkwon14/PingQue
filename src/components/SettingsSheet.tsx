@@ -8,7 +8,7 @@ export function SettingsButton({ onClick }: { onClick: () => void }) {
       type="button"
       onClick={onClick}
       aria-haspopup="dialog"
-      className="inline-flex min-h-12 shrink-0 items-center gap-2 whitespace-nowrap rounded-2xl bg-zinc-800 px-4 font-semibold active:bg-zinc-700"
+      className="inline-flex min-h-12 shrink-0 items-center gap-2 whitespace-nowrap rounded-btn border border-tc-line bg-tc-raised px-4 font-semibold transition-colors hover:bg-tc-off active:bg-tc-off"
     >
       <svg aria-hidden viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="3" />
@@ -44,22 +44,22 @@ export function SettingsSheet({
 
   return (
     <div className="fixed inset-0 z-40 flex items-end justify-center sm:items-center">
-      <div aria-hidden className="absolute inset-0 bg-black/70" onClick={onClose} />
+      <div aria-hidden className="absolute inset-0 bg-black/75" onClick={onClose} />
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="relative flex max-h-[90dvh] w-full max-w-xl flex-col rounded-t-3xl bg-zinc-950 shadow-2xl sm:rounded-3xl"
+        className="relative flex max-h-[90dvh] w-full max-w-xl flex-col rounded-t-3xl border border-tc-line bg-tc-bg shadow-2xl sm:rounded-3xl"
       >
-        <div className="flex items-center justify-between gap-3 border-b border-zinc-800 px-4 py-3">
-          <h2 id={titleId} className="text-xl font-bold">
+        <div className="flex items-center justify-between gap-3 border-b border-tc-line px-4 py-3">
+          <h2 id={titleId} className="font-display text-2xl font-bold">
             설정
           </h2>
           <button
             type="button"
             aria-label="설정 닫기"
             onClick={onClose}
-            className="grid size-12 place-items-center rounded-2xl bg-zinc-800 text-xl font-bold active:bg-zinc-700"
+            className="grid size-12 place-items-center rounded-btn border border-tc-line bg-tc-raised text-xl font-semibold transition-colors hover:bg-tc-off active:bg-tc-off"
           >
             ✕
           </button>

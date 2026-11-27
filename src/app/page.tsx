@@ -6,7 +6,6 @@ import { CueLamps } from "@/components/landing/CueLamps";
 import { LandingHeader } from "@/components/landing/LandingHeader";
 import { PhoneFrame, TabletFrame } from "@/components/landing/DeviceFrames";
 import { LANDING_CONTENT } from "@/lib/landing/content";
-import { bodyFont, displayFont } from "@/lib/landing/fonts";
 import { LANG_COOKIE, resolveLang } from "@/lib/landing/lang";
 
 async function currentLang() {
@@ -33,7 +32,7 @@ export default async function LandingPage() {
   return (
     <div
       lang={lang}
-      className={`tc-root ${displayFont.variable} ${bodyFont.variable} flex flex-1 flex-col break-keep`}
+      className="tc-root flex flex-1 flex-col break-keep"
     >
       <LandingHeader lang={lang} nav={t.nav} />
 

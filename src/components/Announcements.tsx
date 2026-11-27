@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { primaryButton } from "@/components/ui";
+import { fieldBase, Lamp, panel, primaryButton } from "@/components/ui";
 import { actionErrorMessage, api } from "@/lib/client/api";
 import { timeAgo } from "@/lib/client/format";
 import { dismissedAnnouncementKey, useStoredValue, writeStored } from "@/lib/client/storage";
@@ -29,16 +29,19 @@ export function AnnouncementBanner({
       />
       <div
         role="alert"
-        className="flex items-start justify-between gap-3 border-b-4 border-amber-400 bg-amber-400/15 px-4 py-4"
+        className="flex items-start justify-between gap-3 border-b-4 border-tc-amber bg-tc-amber/15 px-4 py-4"
       >
         <div className="min-w-0">
-          <div className="text-sm font-bold text-amber-300">호스트 공지</div>
-          <div className="text-3xl font-black leading-tight break-words">{announcement.text}</div>
+          <div className="flex items-center gap-2 text-base font-semibold text-tc-amber">
+            <Lamp tone="amber" className="size-2.5" />
+            호스트 공지
+          </div>
+          <div className="mt-1 font-display text-3xl leading-snug font-bold break-words">{announcement.text}</div>
         </div>
         <button
           type="button"
           onClick={() => writeStored(dismissedAnnouncementKey(code), announcement.id)}
-          className="min-h-12 shrink-0 rounded-2xl bg-black/30 px-4 font-bold"
+          className="min-h-12 shrink-0 rounded-btn border border-tc-amber/60 px-4 font-semibold text-tc-amber active:bg-tc-amber/20"
         >
           닫기
         </button>
@@ -63,19 +66,19 @@ export function AnnouncementHistory({
         type="button"
         aria-expanded={open}
         onClick={() => setOpen(!open)}
-        className="flex min-h-12 items-center justify-between gap-3 rounded-2xl bg-zinc-900 px-4 font-semibold text-zinc-200 active:bg-zinc-800"
+        className={`${panel} flex min-h-12 items-center justify-between gap-3 px-4 font-semibold text-tc-chalk active:bg-tc-raised`}
       >
         <span>받은 공지 {announcements.length}개</span>
-        <span aria-hidden className="text-zinc-500">
+        <span aria-hidden className="text-tc-muted">
           {open ? "접기 ▲" : "보기 ▼"}
         </span>
       </button>
       {open ? (
-        <ul className="flex flex-col gap-2 rounded-2xl bg-zinc-900 p-4">
+        <ul className={`${panel} flex flex-col gap-3 p-4`}>
           {announcements.map((a) => (
             <li key={a.id} className="flex items-start justify-between gap-3">
               <span className="min-w-0 break-words text-lg font-semibold">{a.text}</span>
-              <span className="shrink-0 pt-1 text-sm text-zinc-500">{timeAgo(serverNow - a.createdAt)}</span>
+              <span className="shrink-0 pt-1 text-sm text-tc-muted">{timeAgo(serverNow - a.createdAt)}</span>
             </li>
           ))}
         </ul>
@@ -117,8 +120,8 @@ export function HostAnnouncePanel({
   }
 
   return (
-    <section className="flex flex-col gap-3 rounded-3xl bg-zinc-900 p-4">
-      <h2 className="font-bold">모두에게 공지</h2>
+    <section className={`${panel} flex flex-col gap-3 p-4`}>
+      <h2 className="text-lg font-semibold">모두에게 공지</h2>
       <div className="flex flex-wrap gap-2">
         {presets.map((preset) => (
           <button
@@ -126,7 +129,7 @@ export function HostAnnouncePanel({
             type="button"
             disabled={sending}
             onClick={() => void send(preset)}
-            className="min-h-11 rounded-full bg-amber-400/20 px-4 font-semibold text-amber-200 active:bg-amber-400/40 disabled:opacity-40"
+            className="min-h-12 rounded-full border border-tc-amber/40 bg-tc-amber/10 px-5 font-semibold text-tc-amber transition-colors hover:bg-tc-amber/20 active:bg-tc-amber active:text-tc-ink disabled:opacity-40"
           >
             {preset}
           </button>
@@ -145,19 +148,19 @@ export function HostAnnouncePanel({
           maxLength={ANNOUNCEMENT_MAX_LENGTH}
           placeholder="직접 입력"
           aria-label="공지 내용"
-          className="min-h-14 min-w-0 flex-1 rounded-2xl bg-zinc-800 px-4 text-lg"
+          className={`${fieldBase} min-h-14 min-w-0 flex-1 bg-tc-bg text-lg`}
         />
         <button type="submit" disabled={sending || !text.trim()} className={primaryButton}>
           보내기
         </button>
       </form>
-      {error ? <p className="text-red-400">{error}</p> : null}
+      {error ? <p className="font-medium text-tc-red">{error}</p> : null}
       {announcements.length > 0 ? (
-        <ul className="flex flex-col gap-1 text-sm text-zinc-400">
+        <ul className="flex flex-col gap-1.5 border-t border-tc-line pt-3 text-base text-tc-muted">
           {announcements.slice(0, HOST_HISTORY_VISIBLE).map((a, i) => (
             <li key={a.id} className="flex justify-between gap-3">
-              <span className={`min-w-0 truncate ${i === 0 ? "font-bold text-zinc-200" : ""}`}>{a.text}</span>
-              <span className="shrink-0 text-zinc-500">{timeAgo(serverNow - a.createdAt)}</span>
+              <span className={`min-w-0 truncate ${i === 0 ? "font-semibold text-tc-chalk" : ""}`}>{a.text}</span>
+              <span className="shrink-0 text-tc-dim">{timeAgo(serverNow - a.createdAt)}</span>
             </li>
           ))}
         </ul>

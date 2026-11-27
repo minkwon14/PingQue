@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ButtonListEditor } from "@/components/ButtonListEditor";
-import { primaryButton, secondaryButton } from "@/components/ui";
+import { compactButton, panel, primaryButton, secondaryButton } from "@/components/ui";
 import { actionErrorMessage } from "@/lib/client/api";
 import { newRequestId } from "@/lib/client/id";
 
@@ -48,32 +48,32 @@ export function HostListPanel({
 
   if (!draft) {
     return (
-      <section className="flex flex-col gap-3 rounded-3xl bg-zinc-900 p-4">
+      <section className={`${panel} flex flex-col gap-3 p-4`}>
         <div className="flex items-center justify-between gap-3">
-          <h2 className="font-bold">
+          <h2 className="text-lg font-semibold">
             {title} {saved.length}/{maxItems}
           </h2>
           <button
             type="button"
             onClick={() => setDraft(saved.map((label) => ({ id: newRequestId(), label })))}
-            className="min-h-11 rounded-xl bg-zinc-800 px-4 font-semibold"
+            className={compactButton}
           >
             편집
           </button>
         </div>
         {saved.length > 0 ? (
-          <p className="text-zinc-400">{saved.join(" · ")}</p>
+          <p className="text-base text-tc-muted">{saved.join(" · ")}</p>
         ) : (
-          <p className="text-sm text-zinc-500">{emptyHint}</p>
+          <p className="text-base text-tc-muted">{emptyHint}</p>
         )}
       </section>
     );
   }
 
   return (
-    <section className="flex flex-col gap-4 rounded-3xl border-2 border-indigo-400/60 bg-zinc-900 p-4">
-      <h2 className="font-bold">{title} 편집</h2>
-      <p className="text-sm text-zinc-500">{hint}</p>
+    <section className="flex flex-col gap-4 rounded-2xl border-2 border-tc-amber/60 bg-tc-deck p-4">
+      <h2 className="text-lg font-semibold">{title} 편집</h2>
+      <p className="text-base text-tc-muted">{hint}</p>
       <ButtonListEditor
         buttons={draft}
         onChange={setDraft}
@@ -81,7 +81,7 @@ export function HostListPanel({
         maxLength={maxLength}
         itemName={itemName}
       />
-      {error ? <p className="text-red-400">{error}</p> : null}
+      {error ? <p className="font-medium text-tc-red">{error}</p> : null}
       <div className="flex gap-3">
         <button type="button" onClick={() => setDraft(null)} disabled={saving} className={`${secondaryButton} flex-1`}>
           취소

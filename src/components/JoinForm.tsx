@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { RolePicker } from "@/components/RolePicker";
-import { Notice, primaryButton } from "@/components/ui";
+import { inputField, linkClass, Notice, primaryButton } from "@/components/ui";
 import { api, ApiError } from "@/lib/client/api";
 import {
   deviceKey,
@@ -82,7 +82,7 @@ export function JoinForm({ code }: { code: string }) {
       <Notice
         title={title}
         action={
-          <Link href="/start" className="text-indigo-300 underline">
+          <Link href="/start" className={linkClass}>
             처음으로
           </Link>
         }
@@ -120,28 +120,30 @@ export function JoinForm({ code }: { code: string }) {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-6 p-6 pt-10">
-      <header>
-        <p className="text-sm text-zinc-500">{template.name}</p>
-        <h1 className="text-3xl font-black">방 {code} 참여</h1>
-        <p className="mt-1 text-zinc-400">
+    <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-8 px-5 pb-12 pt-10">
+      <header className="flex flex-col gap-1">
+        <p className="text-base text-tc-muted">{template.name}</p>
+        <h1 className="font-display text-3xl leading-snug font-bold">
+          방 <span className="font-mono tracking-widest text-tc-amber">{code}</span> 참여
+        </h1>
+        <p className="text-base text-tc-muted">
           {room.participantCount}/{room.maxParticipants}명 참여 중
         </p>
       </header>
 
       {full ? (
-        <p className="rounded-2xl bg-red-500/15 p-4 text-red-200">방이 가득 찼어요.</p>
+        <p className="rounded-2xl border border-tc-red bg-tc-red/15 p-4 text-lg font-medium text-tc-red">방이 가득 찼어요.</p>
       ) : (
-        <form onSubmit={submit} className="flex flex-col gap-6">
+        <form onSubmit={submit} className="flex flex-col gap-7">
           <label className="flex flex-col gap-2">
-            <span className="font-semibold">이름</span>
+            <span className="text-lg font-semibold">이름</span>
             <input
               value={nameValue}
               onChange={(e) => setName(e.target.value)}
               maxLength={NAME_MAX_LENGTH}
               placeholder="예: 민"
               autoComplete="given-name"
-              className="min-h-14 rounded-2xl border-2 border-zinc-800 bg-zinc-900 px-4 text-xl"
+              className={inputField}
             />
           </label>
 
@@ -154,7 +156,7 @@ export function JoinForm({ code }: { code: string }) {
           >
             {busy ? "참여 중…" : "참여하기"}
           </button>
-          {error ? <p className="text-red-400">{error}</p> : null}
+          {error ? <p className="font-medium text-tc-red">{error}</p> : null}
         </form>
       )}
     </main>

@@ -1,17 +1,47 @@
 @import "tailwindcss";
 
+/* Cue-lamp backstage tokens, shared by the landing page (landing.css) and the in-room app. */
 :root {
   color-scheme: dark;
-  --background: #0b0d12;
-  --foreground: #eef1f6;
+  --tc-bg: #0c1a20;
+  --tc-deck: #12252d;
+  --tc-deck-raised: #193139;
+  --tc-line: #2a4650;
+  --tc-chalk: #e9efea;
+  --tc-muted: #9fb4b7;
+  --tc-dim: #86999c;
+  --tc-amber: #ffb62e;
+  --tc-blue: #8e9bff;
+  --tc-green: #46d79b;
+  --tc-red: #ff7a6b;
+  --tc-lamp-off: #23404a;
+  --tc-ink: #1a1204;
+  --tc-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .5 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.07'/%3E%3C/svg%3E");
+
+  --background: var(--tc-bg);
+  --foreground: var(--tc-chalk);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-tc-bg: var(--tc-bg);
+  --color-tc-deck: var(--tc-deck);
+  --color-tc-raised: var(--tc-deck-raised);
+  --color-tc-line: var(--tc-line);
+  --color-tc-chalk: var(--tc-chalk);
+  --color-tc-muted: var(--tc-muted);
+  --color-tc-dim: var(--tc-dim);
+  --color-tc-amber: var(--tc-amber);
+  --color-tc-blue: var(--tc-blue);
+  --color-tc-green: var(--tc-green);
+  --color-tc-red: var(--tc-red);
+  --color-tc-off: var(--tc-lamp-off);
+  --color-tc-ink: var(--tc-ink);
+  --radius-btn: 0.875rem;
   --font-sans:
-    -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR",
-    "Malgun Gothic", system-ui, sans-serif;
+    var(--font-tc-body), "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", system-ui, sans-serif;
+  --font-display: var(--font-tc-display), "Noto Serif KR", "Nanum Myeongjo", serif;
 }
 
 html {
@@ -26,22 +56,63 @@ html {
 
 html,
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
   -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background-image: var(--tc-noise);
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 button {
   touch-action: manipulation;
 }
 
+:focus-visible {
+  outline: 2px solid var(--tc-amber);
+  outline-offset: 3px;
+}
+
+/* Request-lifecycle lamp: the colour is the status, set through data-tone. Size comes from utilities. */
+.pq-lamp {
+  display: inline-block;
+  flex: none;
+  border-radius: 9999px;
+  background: var(--lamp);
+  box-shadow: 0 0 0 3px rgb(255 255 255 / 0.04), 0 0 12px 1px var(--lamp-glow);
+}
+
+.pq-lamp[data-tone="amber"] {
+  --lamp: var(--tc-amber);
+  --lamp-glow: rgb(255 182 46 / 0.55);
+}
+
+.pq-lamp[data-tone="blue"] {
+  --lamp: var(--tc-blue);
+  --lamp-glow: rgb(142 155 255 / 0.55);
+}
+
+.pq-lamp[data-tone="green"] {
+  --lamp: var(--tc-green);
+  --lamp-glow: rgb(70 215 155 / 0.5);
+}
+
+.pq-lamp[data-tone="off"] {
+  --lamp: var(--tc-lamp-off);
+  --lamp-glow: transparent;
+  box-shadow: none;
+}
+
 @keyframes pq-flash {
   0% {
-    background-color: rgba(250, 204, 21, 0.65);
+    background-color: rgba(255, 182, 46, 0.5);
   }
   100% {
-    background-color: rgba(250, 204, 21, 0);
+    background-color: rgba(255, 182, 46, 0);
   }
 }
 
