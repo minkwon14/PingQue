@@ -2,7 +2,15 @@
 
 import { useState } from "react";
 import { RolePicker } from "@/components/RolePicker";
-import { ConfirmDialog, primaryButton, secondaryButton } from "@/components/ui";
+import {
+  compactButton,
+  ConfirmDialog,
+  dangerQuietButton,
+  fieldBase,
+  panel,
+  primaryButton,
+  secondaryButton,
+} from "@/components/ui";
 import { actionErrorMessage, api } from "@/lib/client/api";
 import { deviceKey, PROFILE_KEY, writeStored } from "@/lib/client/storage";
 import { NAME_MAX_LENGTH } from "@/lib/config";
@@ -57,16 +65,16 @@ export function ParticipantProfile({
 
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="text-lg font-bold text-zinc-300">내 정보</h2>
+      <h2 className="text-lg font-semibold">내 정보</h2>
       {editing ? (
-        <form onSubmit={save} className="flex flex-col gap-4 rounded-2xl bg-zinc-900 p-4">
+        <form onSubmit={save} className={`${panel} flex flex-col gap-4 p-4`}>
           <label className="flex flex-col gap-2">
-            <span className="font-semibold">이름</span>
+            <span className="text-lg font-semibold">이름</span>
             <input
               value={nameValue}
               onChange={(e) => setNameValue(e.target.value)}
               maxLength={NAME_MAX_LENGTH}
-              className="min-h-12 rounded-2xl border-2 border-zinc-800 bg-zinc-950 px-4 text-lg"
+              className={`${fieldBase} min-h-12 bg-tc-bg text-lg`}
             />
           </label>
           <RolePicker roles={roles} value={roleValue} onChange={setRoleValue} tone="card" />
@@ -80,20 +88,20 @@ export function ParticipantProfile({
           </div>
         </form>
       ) : (
-        <div className="flex items-center justify-between gap-3 rounded-2xl bg-zinc-900 p-4">
+        <div className={`${panel} flex items-center justify-between gap-3 p-4`}>
           <div className="min-w-0 truncate">
-            <b>{name}</b> <span className="text-zinc-400">· {role}</span>
+            <b>{name}</b> <span className="text-tc-muted">· {role}</span>
           </div>
           <button
             type="button"
             onClick={startEdit}
-            className="min-h-12 shrink-0 rounded-2xl bg-zinc-800 px-4 font-semibold active:bg-zinc-700"
+            className={`${compactButton} min-h-12`}
           >
             이름·역할 수정
           </button>
         </div>
       )}
-      {error ? <p className="text-red-400">{error}</p> : null}
+      {error ? <p className="font-medium text-tc-red">{error}</p> : null}
     </section>
   );
 }
@@ -118,11 +126,11 @@ export function LeaveRoomButton({ code, token }: { code: string; token: string }
 
   return (
     <>
-      {error ? <p className="text-red-400">{error}</p> : null}
+      {error ? <p className="font-medium text-tc-red">{error}</p> : null}
       <button
         type="button"
         onClick={() => setConfirmLeave(true)}
-        className="min-h-12 rounded-2xl bg-zinc-900 px-6 font-semibold text-red-300 active:bg-zinc-800"
+        className={dangerQuietButton}
       >
         나가기
       </button>

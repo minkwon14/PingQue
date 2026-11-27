@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { primaryButton, secondaryButton } from "@/components/ui";
+import { fieldBase, Lamp, primaryButton, secondaryButton } from "@/components/ui";
 import { TEMPLATES } from "@/lib/domain/templates";
 import { normalizeJoinCode } from "@/lib/domain/rules";
 import { api } from "@/lib/client/api";
@@ -42,16 +42,23 @@ export default function StartPage() {
   const normalized = normalizeJoinCode(code);
 
   return (
-    <main className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-10 p-6 pt-12">
-      <header>
-        <h1 className="text-4xl font-black tracking-tight">
-          <Link href="/">TapCue</Link>
+    <main className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-12 px-5 pb-14 pt-10 sm:pt-16">
+      <header className="flex flex-col gap-3">
+        <h1 className="font-display text-4xl font-bold tracking-tight">
+          <Link href="/" className="inline-flex items-center gap-3">
+            <span aria-hidden className="flex items-center gap-1.5">
+              <Lamp tone="amber" className="size-3.5" />
+              <Lamp tone="blue" className="size-3.5" />
+              <Lamp tone="green" className="size-3.5" />
+            </span>
+            TapCue
+          </Link>
         </h1>
-        <p className="mt-2 text-lg text-zinc-400">터치 한 번으로 보내는 현장 실시간 신호</p>
+        <p className="text-lg text-tc-muted">터치 한 번으로 보내는 현장 실시간 신호</p>
       </header>
 
-      <section id="create" className="flex flex-col gap-4">
-        <h2 className="text-xl font-bold">방 만들기 (호스트)</h2>
+      <section id="create" className="flex scroll-mt-6 flex-col gap-4">
+        <h2 className="font-display text-2xl font-bold">방 만들기 (호스트)</h2>
         <div className="flex flex-col gap-3">
           {TEMPLATES.map((t) => (
             <button
@@ -59,28 +66,28 @@ export default function StartPage() {
               type="button"
               onClick={() => setTemplateId(t.id)}
               aria-pressed={templateId === t.id}
-              className={`rounded-2xl border-2 p-4 text-left ${
+              className={`flex min-h-20 flex-col justify-center rounded-2xl border-2 px-5 py-3 text-left transition-colors ${
                 templateId === t.id
-                  ? "border-indigo-400 bg-indigo-500/15"
-                  : "border-zinc-800 bg-zinc-900"
+                  ? "border-tc-amber bg-tc-amber/10"
+                  : "border-tc-line bg-tc-deck hover:bg-tc-raised"
               }`}
             >
-              <div className="text-lg font-bold">{t.name}</div>
-              <div className="text-sm text-zinc-400">{t.description}</div>
+              <div className="text-xl font-semibold">{t.name}</div>
+              <div className="text-base text-tc-muted">{t.description}</div>
             </button>
           ))}
         </div>
         <button type="button" className={primaryButton} onClick={createRoom} disabled={creating}>
           {creating ? "만드는 중…" : "방 만들기"}
         </button>
-        <p className="text-sm text-zinc-500">
+        <p className="text-base text-tc-muted">
           방은 {ROOM_TTL_LABEL} 뒤에 자동으로 종료돼요. 가입은 필요 없어요.
         </p>
-        {error ? <p className="text-red-400">{error}</p> : null}
+        {error ? <p className="font-medium text-tc-red">{error}</p> : null}
       </section>
 
-      <section id="join" className="flex flex-col gap-4">
-        <h2 className="text-xl font-bold">코드로 참여하기</h2>
+      <section id="join" className="flex scroll-mt-6 flex-col gap-4 border-t border-tc-line pt-10">
+        <h2 className="font-display text-2xl font-bold">코드로 참여하기</h2>
         <form
           className="flex gap-3"
           onSubmit={(e) => {
@@ -97,13 +104,13 @@ export default function StartPage() {
             autoComplete="off"
             inputMode="text"
             maxLength={12}
-            className="min-h-14 min-w-0 flex-1 rounded-2xl border-2 border-zinc-800 bg-zinc-900 px-4 text-center text-2xl font-bold tracking-widest uppercase placeholder:text-base placeholder:font-normal placeholder:tracking-normal"
+            className={`${fieldBase} min-h-14 min-w-0 flex-1 bg-tc-deck text-center font-mono text-2xl font-semibold tracking-widest uppercase placeholder:font-sans placeholder:text-base placeholder:tracking-normal`}
           />
           <button type="submit" className={secondaryButton} disabled={!normalized}>
             참여
           </button>
         </form>
-        <p className="text-sm text-zinc-500">
+        <p className="text-base text-tc-muted">
           QR 코드나 링크로 받았다면 그대로 열면 돼요.
         </p>
       </section>

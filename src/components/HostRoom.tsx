@@ -11,9 +11,16 @@ import {
   ConfirmDialog,
   ConnectionBanner,
   ConnectionIndicator,
+  confirmButton,
+  compactButton,
+  dangerQuietButton,
+  doneButton,
+  Lamp,
+  linkClass,
   Notice,
-  primaryButton,
+  panel,
   secondaryButton,
+  STATUS_EDGE,
   StatusBadge,
 } from "@/components/ui";
 import { actionErrorMessage, api } from "@/lib/client/api";
@@ -101,7 +108,7 @@ export function HostRoom({ code, publicOrigin }: { code: string; publicOrigin?: 
   }, [snapshot]);
 
   const home = (
-    <Link href="/start" className="text-indigo-300 underline">
+    <Link href="/start" className={linkClass}>
       처음으로
     </Link>
   );
@@ -227,33 +234,33 @@ export function HostRoom({ code, publicOrigin }: { code: string; publicOrigin?: 
         className={`pointer-events-none fixed inset-0 z-30 ${newRequestTick > 0 ? "pq-flash" : ""}`}
       />
 
-      <header className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800 bg-background/95 px-4 py-3 backdrop-blur">
+      <header className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 border-b border-tc-line bg-background/95 px-4 py-3 backdrop-blur">
         <div>
-          <div className="flex items-center gap-3 text-sm text-zinc-500">
+          <div className="flex items-center gap-3 text-sm text-tc-muted">
             {template?.name ?? "방"}
             <ConnectionIndicator status={connection.status} />
           </div>
-          <div className="font-mono text-3xl font-black tracking-widest">{groupedCode(code)}</div>
+          <div className="font-mono text-3xl font-semibold tracking-widest text-tc-amber">{groupedCode(code)}</div>
         </div>
         <div className="flex items-center gap-3 text-right">
           <div>
-            <div className="text-xl font-bold">
+            <div className="text-xl font-semibold">
               {snapshot.participantCount}/{snapshot.room.maxParticipants}
             </div>
-            <div className="text-xs text-zinc-500">
+            <div className="text-xs text-tc-muted">
               참여자 · 접속 {snapshot.connectedCount ?? 0}
             </div>
           </div>
           <div>
-            <div className={`font-mono text-xl font-bold ${remaining < 120_000 ? "text-amber-300" : ""}`}>
+            <div className={`font-mono text-xl font-semibold ${remaining < 120_000 ? "text-tc-amber" : ""}`}>
               {formatCountdown(remaining)}
             </div>
-            <div className="text-xs text-zinc-500">남은 시간</div>
+            <div className="text-xs text-tc-muted">남은 시간</div>
           </div>
           <button
             type="button"
             onClick={() => setInviteOpen(!showInvite)}
-            className="min-h-12 shrink-0 whitespace-nowrap rounded-2xl bg-zinc-800 px-4 font-semibold"
+            className={`${compactButton} min-h-12 whitespace-nowrap`}
           >
             {showInvite ? "초대 닫기" : "초대 / QR"}
           </button>
@@ -263,26 +270,26 @@ export function HostRoom({ code, publicOrigin }: { code: string; publicOrigin?: 
 
       <ConnectionBanner connection={connection} />
       {expired ? (
-        <div className="bg-red-500/20 px-4 py-2 text-center text-red-200">방이 종료되었어요.</div>
+        <div className="border-b-2 border-tc-red bg-tc-red/15 px-4 py-2.5 text-center text-lg font-medium text-tc-red">방이 종료되었어요.</div>
       ) : null}
 
       <main className="flex flex-1 flex-col gap-6 p-4">
         {showInvite ? (
-          <section className="flex flex-col items-center gap-4 rounded-3xl bg-zinc-900 p-6 text-center sm:flex-row sm:text-left">
-            <div className="rounded-2xl bg-white p-2">
+          <section className={`${panel} flex flex-col items-center gap-5 p-6 text-center sm:flex-row sm:text-left`}>
+            <div className="rounded-xl bg-white p-2">
               {joinUrl ? <QRCodeSVG value={joinUrl} size={200} level="M" marginSize={1} /> : null}
             </div>
             <div className="flex min-w-0 flex-1 flex-col gap-3">
               <div>
-                <div className="text-sm text-zinc-500">참여 코드</div>
-                <div className="font-mono text-4xl font-black tracking-widest">{groupedCode(code)}</div>
+                <div className="text-base text-tc-muted">참여 코드</div>
+                <div className="font-mono text-4xl font-semibold tracking-widest text-tc-amber">{groupedCode(code)}</div>
               </div>
-              <div className="break-all text-sm text-zinc-300 select-all">{joinUrl}</div>
+              <div className="break-all text-sm text-tc-muted select-all">{joinUrl}</div>
               <button type="button" onClick={() => void copyLink()} className={secondaryButton}>
                 {copied ? "복사했어요" : "링크 복사"}
               </button>
               {isLocalhost ? (
-                <p className="rounded-xl bg-amber-500/15 p-3 text-sm text-amber-200">
+                <p className="rounded-btn border border-tc-amber/40 bg-tc-amber/10 p-3 text-sm text-tc-amber">
                   지금 주소는 <b>{location?.hostname}</b> 이라 다른 기기에서 열 수 없어요. 같은
                   Wi-Fi의 IP 주소(예: http://192.168.0.5:3000)로 이 페이지를 다시 열면 QR이 올바르게 만들어져요.
                 </p>
@@ -291,7 +298,7 @@ export function HostRoom({ code, publicOrigin }: { code: string; publicOrigin?: 
           </section>
         ) : null}
 
-        {actionError ? <p className="text-red-400">{actionError}</p> : null}
+        {actionError ? <p className="font-medium text-tc-red">{actionError}</p> : null}
 
         <HostAnnouncePanel
           code={code}
@@ -303,37 +310,49 @@ export function HostRoom({ code, publicOrigin }: { code: string; publicOrigin?: 
 
         {primary ? (
           <section className="flex flex-col gap-2">
-            <h2 className="text-sm font-bold tracking-wide text-amber-300">가장 오래된 대기 요청</h2>
+            <h2 className="flex items-center gap-2 text-base font-semibold text-tc-amber">
+              <Lamp tone="amber" className="size-2.5" />
+              가장 오래된 대기 요청
+            </h2>
             {card(primary, "primary")}
           </section>
         ) : (
-          <section className="rounded-3xl border-2 border-dashed border-zinc-800 p-10 text-center text-xl text-zinc-500">
+          <section className="rounded-3xl border-2 border-dashed border-tc-line p-10 text-center font-display text-xl text-tc-muted">
             {snapshot.requests.length === 0 ? "아직 요청이 없어요" : "대기 중인 요청이 없어요"}
           </section>
         )}
 
         {waiting.length > 0 ? (
           <section className="flex flex-col gap-2">
-            <h2 className="text-sm font-bold text-zinc-400">대기 중 {waiting.length}건</h2>
+            <h2 className="flex items-center gap-2 text-base font-semibold text-tc-amber">
+              <Lamp tone="amber" className="size-2.5" />
+              대기 중 {waiting.length}건
+            </h2>
             <div className="flex flex-col gap-3">{waiting.map((r) => card(r, "normal"))}</div>
           </section>
         ) : null}
 
         {confirmed.length > 0 ? (
           <section className="flex flex-col gap-2">
-            <h2 className="text-sm font-bold text-sky-300">확인함 {confirmed.length}건</h2>
+            <h2 className="flex items-center gap-2 text-base font-semibold text-tc-blue">
+              <Lamp tone="blue" className="size-2.5" />
+              확인함 {confirmed.length}건
+            </h2>
             <div className="flex flex-col gap-3">{confirmed.map((r) => card(r, "normal"))}</div>
           </section>
         ) : null}
 
         {finished.length > 0 ? (
           <section className="flex flex-col gap-2">
-            <h2 className="text-sm font-bold text-zinc-500">최근 처리됨</h2>
+            <h2 className="flex items-center gap-2 text-base font-semibold text-tc-muted">
+              <Lamp tone="green" className="size-2.5" />
+              최근 처리됨
+            </h2>
             <ul className="flex flex-col gap-2">
               {finished.map((r) => (
-                <li key={r.id} className="flex items-center justify-between gap-3 rounded-2xl bg-zinc-900/60 px-4 py-3 text-zinc-400">
+                <li key={r.id} className={`${panel} flex items-center justify-between gap-3 border-l-4 px-4 py-3 text-tc-muted ${STATUS_EDGE[r.status]}`}>
                   <span className="min-w-0 truncate">
-                    <b className="text-zinc-300">{participantsById.get(r.senderId)?.name ?? "나간 참가자"}</b> · {r.label}
+                    <b className="text-tc-chalk">{participantsById.get(r.senderId)?.name ?? "나간 참가자"}</b> · {r.label}
                   </span>
                   <StatusBadge status={r.status} />
                 </li>
@@ -343,11 +362,11 @@ export function HostRoom({ code, publicOrigin }: { code: string; publicOrigin?: 
         ) : null}
       </main>
 
-      <footer className="flex flex-col items-center gap-3 px-4 py-3 text-center text-xs text-zinc-600">
+      <footer className="flex flex-col items-center gap-3 px-4 py-6 text-center text-sm text-tc-dim">
         <button
           type="button"
           onClick={() => setConfirmClose(true)}
-          className="min-h-12 rounded-2xl bg-zinc-900 px-6 text-base font-semibold text-red-300 active:bg-zinc-800"
+          className={dangerQuietButton}
         >
           방 종료
         </button>
@@ -419,23 +438,26 @@ function RequestCard({
   onStatus: (status: RequestStatus) => void;
 }) {
   const primary = variant === "primary";
+  const size = primary ? "min-h-20 text-2xl" : "";
   return (
     <article
       className={`rounded-3xl p-5 ${
-        primary ? "border-4 border-amber-400 bg-amber-400/10" : "border border-zinc-800 bg-zinc-900"
+        primary
+          ? "border-2 border-tc-amber bg-tc-amber/10 shadow-[0_0_36px_rgb(255_182_46/0.18)]"
+          : `${panel} border-l-4 ${STATUS_EDGE[request.status]}`
       }`}
     >
       <div className="flex items-start justify-between gap-3">
-        <div className="text-zinc-400">
-          <b className="text-zinc-100">{sender?.name ?? "나간 참가자"}</b>
+        <div className="min-w-0 text-lg text-tc-muted">
+          <b className="font-semibold text-tc-chalk">{sender?.name ?? "나간 참가자"}</b>
           {sender ? ` · ${sender.role}` : ""}
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-zinc-500">{timeAgo(ageMs)}</span>
+        <div className="flex shrink-0 flex-col items-end gap-1.5 sm:flex-row sm:items-center sm:gap-3">
+          <span className="text-sm text-tc-muted">{timeAgo(ageMs)}</span>
           <StatusBadge status={request.status} />
         </div>
       </div>
-      <div className={`mt-3 font-black leading-tight ${primary ? "text-5xl" : "text-2xl"}`}>
+      <div className={`mt-3 font-display font-bold leading-tight ${primary ? "text-4xl sm:text-5xl" : "text-2xl"}`}>
         {request.label}
       </div>
       <div className="mt-4 flex gap-3">
@@ -444,7 +466,7 @@ function RequestCard({
             type="button"
             disabled={busy}
             onClick={() => onStatus("confirmed")}
-            className={`${primaryButton} flex-1 ${primary ? "min-h-20 text-2xl" : ""}`}
+            className={`${confirmButton} flex-1 ${size}`}
           >
             확인했어요
           </button>
@@ -453,9 +475,7 @@ function RequestCard({
           type="button"
           disabled={busy}
           onClick={() => onStatus("done")}
-          className={`flex-1 rounded-2xl bg-emerald-600 font-bold text-white active:bg-emerald-500 disabled:opacity-40 ${
-            primary ? "min-h-20 text-2xl" : "min-h-14 text-lg"
-          }`}
+          className={`${doneButton} flex-1 ${size}`}
         >
           완료
         </button>
